@@ -11,8 +11,10 @@
  See the README file in the top-level LAMMPS directory.
  ------------------------------------------------------------------------- */
 
-#include "math.h"
-#include "stdlib.h"
+#include <math.h>
+#include <stdlib.h>
+#include <iostream>
+
 #include "pair_sph_rhosum_multiphase.h"
 #include "sph_kernel_quintic.h"
 #include "atom.h"
@@ -25,7 +27,6 @@
 #include "neighbor.h"
 #include "update.h"
 #include "domain.h"
-#include <iostream>
 
 using namespace LAMMPS_NS;
 
@@ -213,8 +214,8 @@ void PairSPHRhoSumMultiphase::coeff(int narg, char **arg) {
     allocate();
 
   int ilo, ihi, jlo, jhi;
-  force->bounds(arg[0], atom->ntypes, ilo, ihi);
-  force->bounds(arg[1], atom->ntypes, jlo, jhi);
+  force->bounds(FLERR,arg[0], atom->ntypes, ilo, ihi);
+  force->bounds(FLERR,arg[1], atom->ntypes, jlo, jhi);
 
   double cut_one = force->numeric(FLERR, arg[2]);
 
