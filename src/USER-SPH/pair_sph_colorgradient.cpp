@@ -11,8 +11,11 @@
  See the README file in the top-level LAMMPS directory.
  ------------------------------------------------------------------------- */
 
-#include "math.h"
-#include "stdlib.h"
+#include <iostream>
+#include <assert.h>
+#include <math.h>
+#include <stdlib.h>
+
 #include "pair_sph_colorgradient.h"
 #include "sph_kernel_quintic.h"
 #include "atom.h"
@@ -25,8 +28,6 @@
 #include "neighbor.h"
 #include "update.h"
 #include "domain.h"
-#include <iostream>
-#include <assert.h>
 
 using namespace LAMMPS_NS;
 
@@ -231,8 +232,8 @@ void PairSPHColorGradient::coeff(int narg, char **arg) {
     allocate();
 
   int ilo, ihi, jlo, jhi;
-  force->bounds(arg[0], atom->ntypes, ilo, ihi);
-  force->bounds(arg[1], atom->ntypes, jlo, jhi);
+  force->bounds(FLERR,arg[0], atom->ntypes, ilo, ihi);
+  force->bounds(FLERR,arg[1], atom->ntypes, jlo, jhi);
 
   double cut_one = force->numeric(FLERR, arg[2]);
   double alpha_one = force->numeric(FLERR, arg[3]);
