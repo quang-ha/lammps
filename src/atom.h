@@ -76,6 +76,7 @@ class Atom : protected Pointers {
   // USER-SPH package
 
   double *rho,*drho,*e,*de,*cv;
+  double **colorgradient;
   double **vest;
 
   // USER-SMD package
