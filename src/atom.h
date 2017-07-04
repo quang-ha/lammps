@@ -139,6 +139,7 @@ class Atom : protected Pointers {
   int vfrac_flag,spin_flag,eradius_flag,ervel_flag,erforce_flag;
   int cs_flag,csforce_flag,vforce_flag,ervelforce_flag,etag_flag;
   int rho_flag,e_flag,cv_flag,vest_flag;
+  int colorgradient_flag; // for SPH multiphase
   int dpd_flag;
 
   // USER-SMD package
