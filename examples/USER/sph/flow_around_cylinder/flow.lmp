@@ -97,14 +97,16 @@ variable           bin_step equal 2/${nx}
 # end line
 variable           xend equal 0.95*${Lx}
 region             rend block ${xend} ${Lx} 0 ${Ly} EDGE EDGE units box
-fix av_vend all ave/spatial 1 ${Nfreq} ${Nfreq} &
-y center ${bin_step} vx region rend file ${dname}/vend.av ave running units reduced
+# fix av_vend all ave/spatial 1 ${Nfreq} ${Nfreq} y center ${bin_step} vx region rend file ${dname}/vend.av ave running units reduced
+compute cc1 all chunk/atom bin/1d y center ${bin_step}
+fix av_vx all ave/chunk 1 ${Nfreq} ${Nfreq} cc1 vx vz norm sample file ${dname}/vend.av
 
 # center line
 variable           x1 equal 0.45*${Lx}
 variable           x2 equal 0.55*${Lx}
 region             rcenter block ${x1} ${x2} 0 ${Ly} EDGE EDGE units box
-fix av_vcen all ave/spatial 1 ${Nfreq} ${Nfreq} &
-y center ${bin_step} vx region rcenter file ${dname}/vcen.av ave running units reduced
+# fix av_vcen all ave/spatial 1 ${Nfreq} ${Nfreq} y center ${bin_step} vx region rcenter file ${dname}/vcen.av ave running units reduced
+compute cc2 all chunk/atom bin/1d y center ${bin_step}
+fix av_vx all ave/chunk 1 ${Nfreq} ${Nfreq} cc2 vx vz norm sample file ${dname}/vcen.av
 
 run                $(round(6000/dt))
