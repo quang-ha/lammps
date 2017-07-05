@@ -64,6 +64,9 @@ run              ${rtransient}
 # save velocity profile
 compute vxav all reduce ave vx
 variable  vx_cm atom vx-c_vxav
-fix av_vx all ave/spatial 1 ${rtransient} ${rtransient} &
-y center 0.05 v_vx_cm file ${dname}/vx.av ave one units reduced
+# fix av_vx all ave/spatial 1 ${rtransient} ${rtransient} y center 0.05 v_vx_cm file ${dname}/vx.av ave one units reduced
+
+compute cc1 all chunk/atom bin/1d y center 0.05
+fix av_vx all ave/chunk 1 ${rtransient} ${rtransient} cc1 vx vz norm sample file ${dname}/vx.av
+
 run               ${rtransient}
