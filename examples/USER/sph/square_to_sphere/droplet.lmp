@@ -44,12 +44,12 @@ else &
 create_atoms       ${g_type} region box
 
 
-set                 type ${d_type} meso_rho ${sph_rho_d}
-set                 type ${g_type} meso_rho ${sph_rho_g}
+set                 type ${d_type} meso/rho ${sph_rho_d}
+set                 type ${g_type} meso/rho ${sph_rho_g}
 
-compute            rho_peratom all meso_rho/atom
+compute            rho_peratom all meso/rho/atom
 compute            colorgradient_peratom all meso_colorgradient/atom
-compute            ie_atom all meso_e/atom
+compute            ie_atom all meso/e/atom
 
 # do full time integration for all particles
 fix                integrate_fix_full all meso
@@ -68,7 +68,7 @@ neighbor           0 bin
 neigh_modify       delay 0 every 1
 
 comm_modify        vel yes
-set                group all meso_rho ${sph_rho_g}
+set                group all meso/rho ${sph_rho_g}
 
 pair_style         hybrid/overlay sph/rhosum/multiphase 1 sph/colorgradient 1 &
                    sph/taitwater/multiphase sph/surfacetension
