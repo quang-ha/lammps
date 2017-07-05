@@ -45,7 +45,7 @@ set          group boundary type ${w_type}
 # fix wall particles
 fix          wallim boundary setforce 0 0 0
 
-compute            rho_peratom all meso_rho/atom
+compute            rho_peratom all meso/rho/atom
 compute            colorgradient_peratom all meso_colorgradient/atom
 
 fix                integrate_fix_full all meso
@@ -67,7 +67,7 @@ neighbor           0       bin
 neigh_modify       delay 0 every 1
 comm_modify        vel yes
 
-set                group all meso_rho ${sph_rho_g}
+set                group all meso/rho ${sph_rho_g}
 
 pair_style         hybrid/overlay sph/rhosum/multiphase 1 sph/colorgradient 1 &
                    sph/taitwater/multiphase sph/surfacetension
@@ -107,9 +107,9 @@ variable            vx atom ${v0}*v_xc/${r0}*(1-v_yc^2/(${r0}*v_r))*exp(-v_r/${r
 variable            vy atom -${v0}*v_yc/${r0}*(1-v_xc^2/(${r0}*v_r))*exp(-v_r/${r0})
 
 
-set                 type ${d_type} meso_rho ${sph_rho_d}
-set                 type ${g_type} meso_rho ${sph_rho_g}
-set                 type ${w_type} meso_rho ${sph_rho_w}
+set                 type ${d_type} meso/rho ${sph_rho_d}
+set                 type ${g_type} meso/rho ${sph_rho_g}
+set                 type ${w_type} meso/rho ${sph_rho_w}
 
 variable            time equal step*dt
 thermo_style        custom step v_time
