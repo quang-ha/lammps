@@ -35,10 +35,10 @@ else &
 create_atoms       ${g_type} region box
 
 # set mass of the particles
-set                group all meso_rho ${sph_rho}
+set                group all meso/rho ${sph_rho}
 set                group all mass ${sph_mass}
 
-compute            rho_peratom all meso_rho/atom
+compute            rho_peratom all meso/rho/atom
 
 # do full time integration for all particles
 fix                integrate_fix_full all meso
@@ -47,7 +47,7 @@ variable           sph_mu  equal ${sph_eta}/${sph_rho}
 include            settimestep.lmp
 
 comm_modify        vel yes
-set                group all meso_rho ${sph_rho}
+set                group all meso/rho ${sph_rho}
 
 pair_style         hybrid/overlay sph/rhosum/multiphase 1 sph/taitwater/morris
 pair_coeff         * * sph/rhosum/multiphase   ${h}
@@ -78,8 +78,8 @@ group	           flow subtract all gcylinder
 fix                wallim gcylinder setforce 0 0 0
 write_data         ${dname}/flow.dat
 
-set                type ${d_type} meso_rho ${sph_rho}
-set                type ${g_type} meso_rho ${sph_rho}
+set                type ${d_type} meso/rho ${sph_rho}
+set                type ${g_type} meso/rho ${sph_rho}
 
 variable bodyfx    atom mass*${gx}
 fix      bodyfx_id flow addforce v_bodyfx 0.0 0.0 
