@@ -126,17 +126,17 @@ region            rsq sphere ${xcenter} ${y1} ${zcenter} 0.1 units box
 set               region rsq type ${d_type}
 set               group boundary type ${w_type}
 
-set               type ${d_type} meso_cv ${cv_d}
-set               type ${g_type} meso_cv ${cv_g}
-set               type ${d_type} meso_e ${e_d}
+set               type ${d_type} meso/cv ${cv_d}
+set               type ${g_type} meso/cv ${cv_g}
+set               type ${d_type} meso/e ${e_d}
 
 set               type ${d_type} mass ${sph_mass_d}
 set               type ${g_type} mass ${sph_mass_g}
 set               type ${w_type} mass ${sph_mass_w}
 
-set               type ${d_type} meso_rho ${sph_rho_d}
-set               type ${g_type} meso_rho ${sph_rho_g}
-set               type ${w_type} meso_rho ${sph_rho_w}
+set               type ${d_type} meso/rho ${sph_rho_d}
+set               type ${g_type} meso/rho ${sph_rho_g}
+set               type ${w_type} meso/rho ${sph_rho_w}
 
 # set a linear temperature profile
 variable          dL   equal 1.0
@@ -149,10 +149,10 @@ unfix             tpr
 
 group              droplet type ${d_type}
 
-compute            rho_peratom all meso_rho/atom
+compute            rho_peratom all meso/rho/atom
 compute            colorgradient_peratom all meso_colorgradient/atom
-compute         it_atom all meso_t/atom
-compute         ie_atom all meso_e/atom
+compute         it_atom all meso/t/atom
+compute         ie_atom all meso/e/atom
 compute         ie all reduce sum c_ie_atom
 variable        vie equal c_ie
 variable        volume atom mass/c_rho_peratom
