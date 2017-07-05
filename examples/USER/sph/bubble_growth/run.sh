@@ -8,6 +8,6 @@ nx=20
 lmp=../../../../src/lmp_mpi
 
 dname=data-ndim${ndim}-nx${nx}
-${lmp} -var nx ${nx} -var ndim ${ndim} -var dname ${dname} -in bubble.lmp
+mpirun -np 8 ${lmp} -var nx ${nx} -var ndim ${ndim} -var dname ${dname} -in bubble.lmp
     
     
