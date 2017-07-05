@@ -77,9 +77,9 @@ pair_coeff         ${v_type} ${v_type} sph/heatconduction/phasechange  ${D_heat_
 include            in.phases
 
 group           bubble type ${v_type}
-compute         rho_peratom all meso_rho/atom
-compute         it_atom all meso_t/atom
-compute         ie_atom all meso_e/atom
+compute         rho_peratom all meso/rho/atom
+compute         it_atom all meso/t/atom
+compute         ie_atom all meso/e/atom
 compute         ie all reduce sum c_ie_atom
 compute         ie_ave bubble reduce ave c_ie_atom
 compute         ie_max bubble reduce max c_ie_atom
