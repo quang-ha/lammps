@@ -31,7 +31,7 @@ atom_style meso/multiphase
 
 **pair_sph_colorgradient**
 
-A [[http://lammps.sandia.gov/doc/pair_style.html][pair_style]] to calculate a color gradient
+A [pair_style](http://lammps.sandia.gov/doc/pair_style.html) to calculate a color gradient
 
 ```
 pair_style         sph/colorgradient
@@ -42,7 +42,7 @@ Here, `I` and `J` are the types of SPH particles for which a color gradient is c
 
 **pair_sph_surfacetension**
 
-A [[http://lammps.sandia.gov/doc/pair_style.html][pair_style]] to calculate surface tension
+A [pair_style](http://lammps.sandia.gov/doc/pair_style.html) to calculate surface tension
 
 ```
 pair_coeff         I J     sph/surfacetension ${h}
