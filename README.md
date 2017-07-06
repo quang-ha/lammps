@@ -89,4 +89,4 @@ fix     fix_ID group_ID phase_change &
 `fix_ID` and `group_ID` are described in LAMMPS documentation. `TC` is critical temperature of the phase change, =TT= is transition temperature for the algorithm (should be set above `TC`), `dr` a characteristic distance for a new particle position, `mass` a mass of a new particle, `h` cutoff of the interaction, `from_type` and `to_type` types of the particles involved in phase transition, `N` frequency of the check for phase transition algorithm, `seed` a seed for random number generator, `prob` probability of the phase transition if all criteria are met (`0<prob<1`), `region` a region where algorithm checks for potential phase transition.
 
 # Examples
-See [file:examples/USER/sph/]
+See (file:examples/USER/sph/)
