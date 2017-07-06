@@ -76,7 +76,7 @@ should be used for corresponding particle
 pair_coeff         I J  sph/heatconduction/phasechange  ${D_heat_ld} TI NULL
 ```
 
-*fix_phase_change
+**fix_phase_change**
 
 Fix which adds a phase change
 
