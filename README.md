@@ -6,11 +6,11 @@ documentation of LAMMPS and to SPH-USER package:
 
 The original code is from https://github.com/slitvinov/lammps-sph-multiphase where the remaining of the README is based on.
 
-* Implementation
+# Implementation
 
 We add the following extension to USER-SPH package:
 
-** atom_style meso/multiphase:
+**atom_style meso/multiphase**
 
 This is data structures which provides
 - position
@@ -29,7 +29,7 @@ This data structure can be activated by
 atom_style meso/multiphase
 ```
 
-** pair_sph_colorgradient
+**pair_sph_colorgradient**
 
 A [[http://lammps.sandia.gov/doc/pair_style.html][pair_style]] to calculate a color gradient
 
@@ -40,7 +40,7 @@ pair_coeff         I J     ${h} ${alpha}
 
 Here, `I` and `J` are the types of SPH particles for which a color gradient is calculated, `alpha` is a surface tension coefficient, `h` is a cutoff.
 
-** pair_sph_surfacetension
+**pair_sph_surfacetension**
 
 A [[http://lammps.sandia.gov/doc/pair_style.html][pair_style]] to calculate surface tension
 
@@ -50,7 +50,7 @@ pair_coeff         I J     sph/surfacetension ${h}
 
 Here, `I` and `J` are the types of SPH particles for which a surface tension is calculated, `h` is a cutoff. Note that surface tension coefficient is included into color gradient.
 
-** pair_sph_heatconduction_phasechange
+**pair_sph_heatconduction_phasechange**
 
 A modified heat conduction equation to use for phase change model. Has to forms. Simple form is equivalent to the heat conduction equation from USER-SPH package.
 
@@ -76,17 +76,17 @@ should be used for corresponding particle
 pair_coeff         I J  sph/heatconduction/phasechange  ${D_heat_ld} TI NULL
 ```
 
-** fix_phase_change
+*fix_phase_change
 
 Fix which adds a phase change
 
 ```
-fix                fix_ID group_ID phase_change &
-                   ${Tc} ${Tt} ${Hwv} ${dr} ${mass_v} &
-		                      ${pcutoff} ${l_type} ${v_type} ${insert_every} 123456 ${prob} region
+fix     fix_ID group_ID phase_change &
+             ${Tc} ${Tt} ${Hwv} ${dr} ${mass_v} &
+	     ${pcutoff} ${l_type} ${v_type} ${insert_every} 123456 ${prob} region
 ```
 
-`fix_ID` and `group_ID` are described in LAMMPS documentation. `TC` is critical temperature of the phase change, =TT= is transition temperature for the algorithm (should be set above `TC`), `dr` a characteristic distance for a new particle position, `mass` a mass of a new particle, =h= cutoff of the interaction, `from_type` and `to_type` types of the particles involved in phase transition, `N` frequency of the check for phase transition algorithm, `seed` a seed for random number generator, `prob` probability of the phase transition if all criteria are met (`0<prob<1`), `region` a region where algorithm checks for potential phase transition.
+`fix_ID` and `group_ID` are described in LAMMPS documentation. `TC` is critical temperature of the phase change, =TT= is transition temperature for the algorithm (should be set above `TC`), `dr` a characteristic distance for a new particle position, `mass` a mass of a new particle, `h` cutoff of the interaction, `from_type` and `to_type` types of the particles involved in phase transition, `N` frequency of the check for phase transition algorithm, `seed` a seed for random number generator, `prob` probability of the phase transition if all criteria are met (`0<prob<1`), `region` a region where algorithm checks for potential phase transition.
 
-* Examples
-See [[file:examples/USER/sph/]]
+# Examples
+See [file:examples/USER/sph/]
