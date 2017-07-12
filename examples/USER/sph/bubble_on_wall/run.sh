@@ -7,4 +7,4 @@ lmp=../../../../src/lmp_mpi
 mpirun=mpirun
 dname=data
 
-${lmp} -in bubble.lmp -var dname ${dname} 
+mpirun -np 8 ${lmp} -in bubble.lmp -var dname ${dname} 

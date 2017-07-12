@@ -60,7 +60,7 @@ region       rupper block EDGE EDGE ${y2} EDGE EDGE EDGE units box
 group        gupper region rupper
 
 # keep constant temperature and density on the top and on the bottom
-fix fbo      gbottom setmeso meso/t ${Tt}
+fix fbo      gbottom setmeso meso/t 1.0
 fix fup      gupper  setmeso meso/t ${Tc}
 fix bm       boundary setmeso meso/rho ${sph_rho_g}
 
