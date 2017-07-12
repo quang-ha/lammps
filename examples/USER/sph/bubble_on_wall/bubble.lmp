@@ -122,6 +122,7 @@ variable            natoms equal count(all)
 #variable          ycenter_per equal ${y1}-0.5*${dx}
 #create_atoms      ${d_type} single  ${xcenter_per} ${ycenter_per} ${zcenter} units box
 
+# Create wall and droplet domain
 region            rsq sphere ${xcenter} ${y1} ${zcenter} 0.1 units box
 set               region rsq type ${d_type}
 set               group boundary type ${w_type}
