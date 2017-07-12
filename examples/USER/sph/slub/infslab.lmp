@@ -36,12 +36,12 @@ set             region left  mass ${mass_l}
 set             region right  mass ${mass_r}
 set             region left  type 1
 set             region right type 2
-set             region left  meso_cv ${cv_l}
-set             region right meso_cv ${cv_r}
-set             region left  meso_e ${e_l}
-set             region right meso_e ${e_r}
-set             region left meso_rho ${rho_l}
-set             region right meso_rho ${rho_r}
+set             region left  meso/cv ${cv_l}
+set             region right meso/cv ${cv_r}
+set             region left  meso/e ${e_l}
+set             region right meso/e ${e_r}
+set             region left meso/rho ${rho_l}
+set             region right meso/rho ${rho_r}
 
 pair_style      sph/heatconduction/phasechange
 pair_coeff      1 1   ${k_l}           ${h}
@@ -49,8 +49,8 @@ variable        klr equal 2*${k_l}*${k_r}/(${k_r}+${k_l})
 pair_coeff      1 2   ${klr}           ${h}
 pair_coeff      2 2   ${k_r}           ${h}
 
-compute         it_atom all meso_t/atom
-compute         rho_peratom all meso_rho/atom
+compute         it_atom all meso/t/atom
+compute         rho_peratom all meso/rho/atom
 compute         it all reduce sum c_it_atom
 
 thermo		10
