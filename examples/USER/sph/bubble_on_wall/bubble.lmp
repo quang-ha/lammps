@@ -60,9 +60,9 @@ region       rupper block EDGE EDGE ${y2} EDGE EDGE EDGE units box
 group        gupper region rupper
 
 # keep constant temperature and density on the top and on the bottom
-fix fbo      gbottom setmeso meso_t 1.0
-fix fup      gupper  setmeso meso_t ${Tc}
-fix bm       boundary setmeso meso_rho ${sph_rho_g}
+fix fbo      gbottom setmeso meso/t ${Tt}
+fix fup      gupper  setmeso meso/t ${Tc}
+fix bm       boundary setmeso meso/rho ${sph_rho_g}
 
 # do full time integration for all particles
 fix                integrate_fix_full all meso
@@ -141,7 +141,7 @@ set               type ${w_type} meso/rho ${sph_rho_w}
 # set a linear temperature profile
 variable          dL   equal 1.0
 variable          tprofile atom ((${Tc}-1)*y/${dL}-((${Tc}-1)*${y1}-${dL})/${dL})*(y-${y1}<${dL})+${Tc}*(y-${y1}>${dL})
-fix               tpr         flow setmeso meso_t v_tprofile
+fix               tpr         flow setmeso meso/t v_tprofile
 if "${ndim}==2" then "fix e2d all enforce2d"
 
 run               0
