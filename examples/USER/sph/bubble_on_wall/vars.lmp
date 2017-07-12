@@ -34,7 +34,7 @@ variable          gamma_g equal 1.0
 variable          gamma_w equal ${gamma_g}
 
 # extract that rbackground in the equation of state
-# pressure ~ ( rho/rho0 - rbackground)^gamma
+# pressure = B*((rho/rho0)^gamma - rbackground)
 variable          rbackground equal 0.0
 
 variable          h equal 3.0*${dx}
