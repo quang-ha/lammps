@@ -41,15 +41,15 @@ FixSetMeso::FixSetMeso(LAMMPS *lmp, int narg, char **arg) :
   global_freq = 1;
   xstr = NULL;
   rhoflag = eflag = tflag = 0;
-  if (strcmp(arg[3],"meso_rho")==0) {
+  if (strcmp(arg[3],"meso/rho")==0) {
     rhoflag = 1;
-  } else if (strcmp(arg[3],"meso_e")==0) {
+  } else if (strcmp(arg[3],"meso/e")==0) {
     eflag = 1;
-  } else if (strcmp(arg[3],"meso_t")==0) {
+  } else if (strcmp(arg[3],"meso/t")==0) {
     tflag = 1;
   }
   else {
-    error->all(FLERR,"Illegal fix setmeso command, meso_rho or meso_e must be given");
+    error->all(FLERR,"Illegal fix setmeso command, meso/rho or meso/e must be given");
   }
 
   if (strstr(arg[4],"v_") == arg[4]) {
