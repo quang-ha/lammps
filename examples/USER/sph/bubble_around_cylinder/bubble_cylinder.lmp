@@ -187,7 +187,7 @@ thermo_style        custom step v_time v_natoms v_vnd
 thermo              ${Nfreq}
 
 variable           pcutoff equal ${h}
-fix                fdep droplet phase_change &
+fix                fdep droplet phase_change_insert_random &
                    ${Tc} ${Tt} ${Hwv} ${dr} ${sph_mass_d} &
                    ${pcutoff} ${g_type} ${d_type} ${insert_every} 12345 ${prob} region rflow units box
 

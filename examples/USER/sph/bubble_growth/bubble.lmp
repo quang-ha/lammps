@@ -109,7 +109,7 @@ variable           insert_every equal 1
 variable           dr equal 0.5*${dx}
 variable           pcutoff equal ${h}
 variable           prob    equal 0.01
-fix                fdep bubble phase_change &
+fix                fdep bubble phase_change_insert_random &
                    ${Tc} ${Tt} ${Hwv} ${dr} ${mass_v} &
                    ${pcutoff} ${l_type} ${v_type} ${insert_every} &
 		   123456 ${prob} region box units box
