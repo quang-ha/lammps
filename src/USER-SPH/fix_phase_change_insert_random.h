@@ -13,22 +13,22 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(phase_change,FixPhaseChange)
+FixStyle(phase_change,FixPhaseChangeInsertRandom)
 
 #else
 
-#ifndef LMP_FIX_PHASECHANGE_H
-#define LMP_FIX_PHASECHANGE_H
+#ifndef LMP_FIX_PHASECHANGE_INSERTRANDOM_H
+#define LMP_FIX_PHASECHANGE_INSERTRANDOM_H
 
 #include "stdio.h"
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixPhaseChange : public Fix {
+class FixPhaseChangeInsertRandom : public Fix {
  public:
-  FixPhaseChange(class LAMMPS *, int, char **);
-  ~FixPhaseChange();
+  FixPhaseChangeInsertRandom(class LAMMPS *, int, char **);
+  ~FixPhaseChangeInsertRandom();
   int setmask();
   void init();
   void init_list(int, class NeighList *);

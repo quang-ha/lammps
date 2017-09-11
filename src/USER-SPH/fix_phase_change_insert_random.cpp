@@ -14,7 +14,7 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
-#include "fix_phase_change.h"
+#include "fix_phase_change_insert_random.h"
 #include "sph_kernel_quintic.h"
 #include "sph_energy_equation.h"
 #include "neighbor.h"
@@ -43,7 +43,7 @@ using namespace FixConst;
 
 /* ---------------------------------------------------------------------- */
 
-FixPhaseChange::FixPhaseChange(LAMMPS *lmp, int narg, char **arg) :
+FixPhaseChangeInsertRandom::FixPhaseChangeInsertRandom(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
   // communicate energy change due to phase change
@@ -123,7 +123,7 @@ FixPhaseChange::FixPhaseChange(LAMMPS *lmp, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixPhaseChange::~FixPhaseChange()
+FixPhaseChangeInsertRandom::~FixPhaseChangeInsertRandom()
 {
   delete random;
   delete [] idregion;
@@ -131,7 +131,7 @@ FixPhaseChange::~FixPhaseChange()
 
 /* ---------------------------------------------------------------------- */
 
-int FixPhaseChange::setmask()
+int FixPhaseChangeInsertRandom::setmask()
 {
   int mask = 0;
   mask |= PRE_EXCHANGE;
@@ -140,7 +140,7 @@ int FixPhaseChange::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixPhaseChange::init()
+void FixPhaseChangeInsertRandom::init()
 {
   // set index and check validity of region
 
@@ -156,7 +156,7 @@ void FixPhaseChange::init()
   neighbor->requests[irequest]->full = 1;
 }
 
-void FixPhaseChange::init_list(int, NeighList *ptr)
+void FixPhaseChangeInsertRandom::init_list(int, NeighList *ptr)
 {
   list = ptr;
 }
@@ -164,7 +164,7 @@ void FixPhaseChange::init_list(int, NeighList *ptr)
 /* ----------------------------------------------------------------------
    perform phase change
 ------------------------------------------------------------------------- */
-void FixPhaseChange::pre_exchange()
+void FixPhaseChangeInsertRandom::pre_exchange()
 {
   // just return if should not be called on this timestep
 
@@ -355,7 +355,7 @@ void FixPhaseChange::pre_exchange()
    parse optional parameters at end of input line
 ------------------------------------------------------------------------- */
 
-void FixPhaseChange::options(int narg, char **arg)
+void FixPhaseChangeInsertRandom::options(int narg, char **arg)
 {
   if (narg < 0) error->all(FLERR,"Illegal fix indent command");
 
@@ -393,7 +393,7 @@ void FixPhaseChange::options(int narg, char **arg)
    pack entire state of Fix into one write
 ------------------------------------------------------------------------- */
 
-void FixPhaseChange::write_restart(FILE *fp)
+void FixPhaseChangeInsertRandom::write_restart(FILE *fp)
 {
   int n = 0;
   double list[4];
@@ -410,7 +410,7 @@ void FixPhaseChange::write_restart(FILE *fp)
    use state info from restart file to restart the Fix
 ------------------------------------------------------------------------- */
 
-void FixPhaseChange::restart(char *buf)
+void FixPhaseChangeInsertRandom::restart(char *buf)
 {
   int n = 0;
   double *list = (double *) buf;
@@ -422,7 +422,7 @@ void FixPhaseChange::restart(char *buf)
   random->reset(seed);
 }
 
-bool FixPhaseChange::insert_one_atom(double* coord, double* sublo, double* subhi)
+bool FixPhaseChangeInsertRandom::insert_one_atom(double* coord, double* sublo, double* subhi)
 {
   int flag;
   double lamda[3];
@@ -464,13 +464,13 @@ bool FixPhaseChange::insert_one_atom(double* coord, double* sublo, double* subhi
   if (flag) return true; else return false;
 }
 
-void FixPhaseChange::create_newpos_simple(double* xone, double delta, double* coord) {
+void FixPhaseChangeInsertRandom::create_newpos_simple(double* xone, double delta, double* coord) {
   coord[0] = xone[0] + (random->uniform() - 0.5)*delta;
   coord[1] = xone[1] + (random->uniform() - 0.5)*delta;
   coord[2] = xone[2] + (random->uniform() - 0.5)*delta;
 }
 
-void FixPhaseChange::create_newpos(double* xone, double* cgone, double delta, double* coord) {
+void FixPhaseChangeInsertRandom::create_newpos(double* xone, double* cgone, double delta, double* coord) {
   double eij[3];
   if (domain->dimension==3) {
     double b1[3];
@@ -512,7 +512,7 @@ void FixPhaseChange::create_newpos(double* xone, double* cgone, double delta, do
   coord[2] = xone[2] + eij[2]*delta/eijabs;
 }
 
-int FixPhaseChange::pack_reverse_comm(int n, int first, double *buf)
+int FixPhaseChangeInsertRandom::pack_reverse_comm(int n, int first, double *buf)
 {
   int i,m,last;
 
@@ -526,7 +526,7 @@ int FixPhaseChange::pack_reverse_comm(int n, int first, double *buf)
 
 /* ---------------------------------------------------------------------- */
 
-void FixPhaseChange::unpack_reverse_comm(int n, int *list, double *buf)
+void FixPhaseChangeInsertRandom::unpack_reverse_comm(int n, int *list, double *buf)
 {
   int i,j,m;
 
@@ -537,7 +537,7 @@ void FixPhaseChange::unpack_reverse_comm(int n, int *list, double *buf)
   }
 }
 
-bool FixPhaseChange::isfromphasearound(int i) {
+bool FixPhaseChangeInsertRandom::isfromphasearound(int i) {
   int* numneigh = list->numneigh;
   double **x = atom->x;
   int *type = atom->type;
