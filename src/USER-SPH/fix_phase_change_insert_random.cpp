@@ -49,7 +49,7 @@ FixPhaseChangeInsertRandom::FixPhaseChangeInsertRandom(LAMMPS *lmp, int narg, ch
   // communicate energy change due to phase change
   comm_reverse = 1;
   int nnarg = 14;
-  if (narg < nnarg) error->all(FLERR,"Illegal fix phase_change command");
+  if (narg < nnarg) error->all(FLERR,"Illegal fix phase_change_insert_random command");
 
   restart_global = 1;
   time_depend = 1;
@@ -88,11 +88,11 @@ FixPhaseChangeInsertRandom::FixPhaseChangeInsertRandom(LAMMPS *lmp, int narg, ch
 
   // error checks on region and its extent being inside simulation box
 
-  if (iregion == -1) error->all(FLERR,"Must specify a region in fix phase_change");
+  if (iregion == -1) error->all(FLERR,"Must specify a region in fix phase_change_insert_random");
   if (domain->regions[iregion]->bboxflag == 0)
-    error->all(FLERR,"Fix phase_change region does not support a bounding box");
+    error->all(FLERR,"Fix phase_change_insert_random region does not support a bounding box");
   if (domain->regions[iregion]->dynamic_check())
-    error->all(FLERR,"Fix phase_change region cannot be dynamic");
+    error->all(FLERR,"Fix phase_change_insert_random region cannot be dynamic");
 
   xlo = domain->regions[iregion]->extent_xlo;
   xhi = domain->regions[iregion]->extent_xhi;
@@ -146,7 +146,7 @@ void FixPhaseChangeInsertRandom::init()
 
   iregion = domain->find_region(idregion);
   if (iregion == -1)
-    error->all(FLERR,"Region ID for fix phase_change does not exist");
+    error->all(FLERR,"Region ID for fix phase_change_insert_random does not exist");
 
   // need a full neighbor list, built whenever re-neighboring occurs
   int irequest = neighbor->request((void *) this);
@@ -365,27 +365,27 @@ void FixPhaseChangeInsertRandom::options(int narg, char **arg)
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"region") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix phase_change command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix phase_change_insert_random command");
       iregion = domain->find_region(arg[iarg+1]);
       if (iregion == -1)
-        error->all(FLERR,"Region ID for fix phase_change does not exist");
+        error->all(FLERR,"Region ID for fix phase_change_insert_random does not exist");
       int n = strlen(arg[iarg+1]) + 1;
       idregion = new char[n];
       strcpy(idregion,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"attempt") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix phase_change command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix phase_change_insert_random command");
       maxattempt = atoi(arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"units") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix phase_change command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix phase_change_insert_random command");
       if (strcmp(arg[iarg+1],"box") == 0) scaleflag = 0;
       else if (strcmp(arg[iarg+1],"lattice") == 0) 
-	error->all(FLERR,"Illegal fix phase_change command: 'units lattice' "
+	error->all(FLERR,"Illegal fix phase_change_insert_random command: 'units lattice' "
 		   "is not implemented");
-      else error->all(FLERR,"Illegal fix phase_change command");
+      else error->all(FLERR,"Illegal fix phase_change_insert_random command");
       iarg += 2;
-    } else error->all(FLERR,"Illegal fix phase_change command");
+    } else error->all(FLERR,"Illegal fix phase_change_insert_random command");
   }
 }
 

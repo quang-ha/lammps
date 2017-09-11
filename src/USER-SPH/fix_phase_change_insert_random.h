@@ -13,7 +13,7 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(phase_change,FixPhaseChangeInsertRandom)
+FixStyle(phase_change_insert_random,FixPhaseChangeInsertRandom)
 
 #else
 
