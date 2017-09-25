@@ -40,8 +40,7 @@ using namespace LAMMPS_NS;
 using namespace FixConst;
 
 /* ---------------------------------------------------------------------- */
-FixPhaseChangeThreshold::FixPhaseChangeThreshold(LAMMPS *lmp, int narg, char **arg) :
-  Fix(lmp, narg, arg)
+FixPhaseChangeThreshold::FixPhaseChangeThreshold(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 {
   // communicate energy change due to phase change
   int nnarg = 5;
@@ -81,13 +80,13 @@ FixPhaseChangeThreshold::FixPhaseChangeThreshold(LAMMPS *lmp, int narg, char **a
   
   if (domain->triclinic == 0) {
     if (xlo < domain->boxlo[0] || xhi > domain->boxhi[0] ||
-	ylo < domain->boxlo[1] || yhi > domain->boxhi[1] ||
-	zlo < domain->boxlo[2] || zhi > domain->boxhi[2])
+  	ylo < domain->boxlo[1] || yhi > domain->boxhi[1] ||
+  	zlo < domain->boxlo[2] || zhi > domain->boxhi[2])
       error->all(FLERR,"Phase change region extends outside simulation box");
   } else {
     if (xlo < domain->boxlo_bound[0] || xhi > domain->boxhi_bound[0] ||
-	ylo < domain->boxlo_bound[1] || yhi > domain->boxhi_bound[1] ||
-	zlo < domain->boxlo_bound[2] || zhi > domain->boxhi_bound[2])
+  	ylo < domain->boxlo_bound[1] || yhi > domain->boxhi_bound[1] ||
+  	zlo < domain->boxlo_bound[2] || zhi > domain->boxhi_bound[2])
       error->all(FLERR,"Phase change region extends outside simulation box");
   }
 

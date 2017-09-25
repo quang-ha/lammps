@@ -13,7 +13,9 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(phase_change_threshold,FixPhaseChangeThreshold)
+FixStyle(phase_change_threshold, FixPhaseChangeThreshold)
+
+#else
 
 #ifndef LMP_FIX_PHASECHANGE_THRESHOLD_H
 #define LMP_FIX_PHASECHANGE_THRESHOLD_H
@@ -45,9 +47,8 @@ class FixPhaseChangeThreshold : public Fix {
 
   // threshold temperature for changing
   double Th;
-
   
-  } 
+}; 
 }
 
 #endif
