@@ -47,15 +47,26 @@ RegTriangle::~RegTriangle()
   delete [] contact;
 }
 /* ----------------------------------------------------------------------
-   one contact if 0 <= x < cutoff from inner surface of triangle
+   contact if 0 <= x < cutoff from inner surface of triangle
+   can be one contact for each edge of the triangle
    no contact if outside (possible if called from union/intersect)
-   delxyz = vector from nearest point on sphere to x
-   special case: no contact if x is at center of sphere
+   delxyz = vector from nearest point on triangle to x
 ------------------------------------------------------------------------- */
 int RegTriangle::surface_interior(double *x, double cutoff)
 {
-  // TODO: Code this up properly
-  return 0;
+  // Check if point is exterior, if yes return 0
+  double side1 = (x[0]-x1)*(y2-y1) - (x[1]-y1)*(x2-x1);
+  double side2 = (x[0]-x2)*(y3-y2) - (x[1]-y2)*(x3-x2);
+  double side3 = (x[0]-x3)*(y1-y3) - (x[1]-y3)*(x1-x3);
+  if (side1 <= 0.0 || side2 <= 0.0 || side3 <= 0.0)
+    return 0;
+
+  // TODO: code up the shortest distance with the edge
+  int n = 0;
+  delta = 
+  
+  
+  return n;
 }
 /* ----------------------------------------------------------------------
    one contact if 0 <= x < cutoff from outer surface of sphere
@@ -68,3 +79,10 @@ int RegTriangle::surface_exterior(double *x, double cutoff)
   return 0;
 }
 /* ---------------------------------------------------------------------- */
+double RegTriangle::point_to_edge_distance(double *x, double x1, double y1,
+					   double x2, double y2)
+{
+  // Calculate the distance between a point (x0, y0) and a line
+  // that goes through two other points (x1, y1) and (x2, y2)
+  
+}

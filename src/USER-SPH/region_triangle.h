@@ -21,6 +21,7 @@ namespace LAMMPS_NS {
     
   private:
     double x1,y1,x2,y2,x3,y3;
+    double point_to_edge_distance(double*, double, double, double, double);
   };
 }
 
