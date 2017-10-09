@@ -47,23 +47,21 @@ RegTriangle::~RegTriangle()
   delete [] contact;
 }
 /* ----------------------------------------------------------------------
-   one contact if 0 <= x < cutoff from normal side of plane
-   no contact if on other side (possible if called from union/intersect)
-   delxyz = vector from nearest projected point on plane to x
+   one contact if 0 <= x < cutoff from inner surface of triangle
+   no contact if outside (possible if called from union/intersect)
+   delxyz = vector from nearest point on sphere to x
+   special case: no contact if x is at center of sphere
 ------------------------------------------------------------------------- */
-
 int RegTriangle::surface_interior(double *x, double cutoff)
 {
   // TODO: Code this up properly
   return 0;
 }
-
 /* ----------------------------------------------------------------------
-   one contact if 0 <= x < cutoff from non-normal side of plane
-   no contact if on other side (possible if called from union/intersect)
-   delxyz = vector from nearest projected point on plane to x
+   one contact if 0 <= x < cutoff from outer surface of sphere
+   no contact if inside (possible if called from union/intersect)
+   delxyz = vector from nearest point on triangle to x
 ------------------------------------------------------------------------- */
-
 int RegTriangle::surface_exterior(double *x, double cutoff)
 {
   // TODO: Code this up properly
