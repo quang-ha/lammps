@@ -63,8 +63,43 @@ int RegTriangle::surface_interior(double *x, double cutoff)
 
   // TODO: code up the shortest distance with the edge
   int n = 0;
-  delta = 
+  double xl[2], delta;
+
+  // First edge
+  delta = point_to_edge_distance(x, x1, y1, x2, y2);
+  if (delta < cutoff)
+    {
+      point_on_line(xl, x, x1, y1, x2, y2);
+      contact[n].r = delta;
+      contact[n].delx = xl[0] - x[0];
+      contact[n].dely = xl[1] - x[1];
+      contact[n].radius = 0;
+      n++;
+    }
   
+  // Second edge
+  delta = point_to_edge_distance(x, x1, y1, x3, y3);
+  if (delta < cutoff)
+    {
+      point_on_line(xl, x, x1, y1, x3, y3);
+      contact[n].r = delta;
+      contact[n].delx = xl[0] - x[0];
+      contact[n].dely = xl[1] - x[1];
+      contact[n].radius = 0;
+      n++;
+    }
+  
+  // Third edge
+  delta = point_to_edge_distance(x, x2, y2, x3, y3);
+  if (delta < cutoff)
+    {
+      point_on_line(xl, x, x2, y2, x3, y3);
+      contact[n].r = delta;
+      contact[n].delx = xl[0] - x[0];
+      contact[n].dely = xl[1] - x[1];
+      contact[n].radius = 0;
+      n++;
+    }
   
   return n;
 }
@@ -84,5 +119,16 @@ double RegTriangle::point_to_edge_distance(double *x, double x1, double y1,
 {
   // Calculate the distance between a point (x0, y0) and a line
   // that goes through two other points (x1, y1) and (x2, y2)
-  
+  return abs((y2-y1)*x[0] - (x2-x1)*x[1] + x2*y1 - x1*y2)/
+    (sqrt((y2-y1)*(y2-y1) + (x2-x1)*(x2-1)));
 }
+/* ---------------------------------------------------------------------- */
+void RegTriangle::point_on_line(double *xl, double*x,
+				double x1, double y1, double x2, double y2)
+{
+  double mag = ((x[0] - x1)*(x2 - x1) + (x[1] - y1)*(y2 - y1))/
+    ((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
+  xl[0] = x1 + (x2 - x1)*mag;
+  xl[1] = y1 + (y2 - y1)*mag;
+}
+/* ---------------------------------------------------------------------- */
