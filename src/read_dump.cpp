@@ -611,7 +611,7 @@ int ReadDump::fields_and_keywords(int narg, char **arg)
     for (int i = 0; i < nfield; i++)
       if (fieldtype[i] == Z || fieldtype[i] == VZ ||
           fieldtype[i] == IZ || fieldtype[i] == FZ)
-        error->all(FLERR,"Illegal read_dump command");
+        error->all(FLERR,"Z-components not expected in 2D simulation");
   }
 
   for (int i = 0; i < nfield; i++)
