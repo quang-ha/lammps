@@ -159,113 +159,109 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::compute(int eflag, int vflag) 
     if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
 	     ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
 	     ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2]))
-       { 
-	 // if (itype == 1) // only do diffusion for ifluid particle
-	 //   {
-	 jlist = firstneigh[i];
-	 jnum = numneigh[i];
-	 
-	 imass = rmass[i];
-	 
-	 for (jj = 0; jj < jnum; jj++) {
-	   j = jlist[jj];
-	   j &= NEIGHMASK;
-	   jtype = type[j];
-	   
-	   // check if the j particles is within the domain
-	   if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-		    x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-		    x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
-	     {
-	       delx = xtmp - x[j][0];
-	       dely = ytmp - x[j][1];
-	       delz = ztmp - x[j][2];
-	       rsq = delx * delx + dely * dely + delz * delz;
-	       
-	       if (jtype == 1) // this is only for fluid-fluid interaction
-		 {	      
-		   if (rsq < cutsq[itype][jtype]) {
-		     h = cut[itype][jtype];
-		     ih = 1.0/h;
-		     
-		     // kernel function
-		     if (domain->dimension == 3) {
-		       wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
-		       wfd = wfd*ih*ih*ih*ih;
-		       wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
-		     } else {
-		       wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
-		       wfd = wfd*ih*ih*ih;
-		       wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
-		     }
-		     
-		     jmass = rmass[j];
-		     
-		     // Calculating the particle exchange
-		     // Reference: Tartakovsky(2007) - Simulations of reactive transport
-		     // and precipitation with sph
-		     // The constants give better results...
-		     ni = rho[i] / imass;
-		     nj = rho[j] / jmass;
-		     deltacA = (1.0/(imass*sqrt(rsq)))*((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
-		     dcA[i] = dcA[i] + deltacA;
-		   }
-		 } // jtype fluid
-	       else // if jtype is solid
-		 {
-		   d = phasecut[itype][jtype];
-		   if (sqrt(rsq) <= d)
-		     {
-		       deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
-		       dcA[i] = dcA[i] - deltacA;
-		     }
-		 } // jtype solid
-	     } // check if j particle is inside
-	 } // jj loop
-	   // } //itype fluid
-	 // else if (itype == 2) // if itype is solid
-	 if (itype == 2) // extra reaction for solid
-	   {
-	     // Self-decay for porous
-	     dcA[i] = dcA[i] - kA[i]*(cA[i] - cAeq[i]);
+      {
+	// Diffusion for both solid and liquid
+	jlist = firstneigh[i];
+	jnum = numneigh[i];
+	
+	imass = rmass[i];
+	
+	for (jj = 0; jj < jnum; jj++) {
+	  j = jlist[jj];
+	  j &= NEIGHMASK;
+	  jtype = type[j];
+	  
+	  // check if the j particles is within the domain
+	  if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+		   x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+		   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
+	    {
+	      delx = xtmp - x[j][0];
+	      dely = ytmp - x[j][1];
+	      delz = ztmp - x[j][2];
+	      rsq = delx * delx + dely * dely + delz * delz;
+	      
+	      if (rsq < cutsq[itype][jtype]) {
+		h = cut[itype][jtype];
+		ih = 1.0/h;
+		
+		// kernel function
+		if (domain->dimension == 3) {
+		  wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
+		  wfd = wfd*ih*ih*ih*ih;
+		  wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
+		} else {
+		  wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
+		  wfd = wfd*ih*ih*ih;
+		  wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
+		}
+		
+		jmass = rmass[j];
+		
+		// Calculating the particle exchange
+		// Reference: Tartakovsky(2007) - Simulations of reactive transport
+		// and precipitation with sph
+		// The constants give better results...
+		ni = rho[i] / imass;
+		nj = rho[j] / jmass;
+		deltacA = (1.0/(imass*sqrt(rsq)))*((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+		dcA[i] = dcA[i] + deltacA;
+	      }
+	      if (jtype == 2) // if jtype is solid
+		{
+		  d = phasecut[itype][jtype];
+		  if (sqrt(rsq) <= d)
+		    {
+		      deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
+		      dcA[i] = dcA[i] - deltacA;
+		    }
+		} // jtype solid
+	    } // check if j particle is inside
+	} // jj loop
 
-	     // Then surface reaction from liquid
-	     jlist = firstneigh[i];
-	     jnum = numneigh[i];
-	     
-	     imass = rmass[i];
-	     
-	     for (jj = 0; jj < jnum; jj++) {
-	       j = jlist[jj];
-	       j &= NEIGHMASK;
-	       jtype = type[j];
-
-	       // check if the j particles is within the domain
-	       if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-			x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-			x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
-		 {
-		   if (jtype == 1) // jfluid going to isolid
-		     {
-		       delx = xtmp - x[j][0];
-		       dely = ytmp - x[j][1];
-		       delz = ztmp - x[j][2];
-		       rsq = delx * delx + dely * dely + delz * delz;
-		       
-		       jmass = rmass[j];
-		       
-		       d = phasecut[itype][jtype];
-		       if (sqrt(rsq) <= d)
-			 {
-			   dmA[i] = dmA[i] + RA[i]*jmass*(cA[j] - cAeq[j]);
-			 }
-		     }
-		 } // check if j particles is within the domain
-	     }
-	   } //itype solid
-       } // check i atom is inside domain
+	// extra reaction for solid
+	if (itype == 2) 
+	  {
+	    // Self-decay for porous
+	    dcA[i] = dcA[i] - kA[i]*(cA[i] - cAeq[i]);
+	    
+	    // Then surface reaction from liquid
+	    jlist = firstneigh[i];
+	    jnum = numneigh[i];
+	    
+	    imass = rmass[i];
+	    
+	    for (jj = 0; jj < jnum; jj++) {
+	      j = jlist[jj];
+	      j &= NEIGHMASK;
+	      jtype = type[j];
+	      
+	      // check if the j particles is within the domain
+	      if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+		       x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+		       x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
+		{
+		  if (jtype == 1) // jfluid going to isolid
+		    {
+		      delx = xtmp - x[j][0];
+		      dely = ytmp - x[j][1];
+		      delz = ztmp - x[j][2];
+		      rsq = delx * delx + dely * dely + delz * delz;
+		      
+		      jmass = rmass[j];
+		      
+		      d = phasecut[itype][jtype];
+		      if (sqrt(rsq) <= d)
+			{
+			  // Increase in mass - preparing for precipitation
+			  dmA[i] = dmA[i] + RA[i]*jmass*(cA[j] - cAeq[j]);
+			}
+		    }
+		} // check if j particles is within the domain
+	    } // jj loop 
+	  } //itype solid
+      } // check i atom is inside domain
   } // ii loop
-  
   // Communicate the ghost dcA and dmA to the locally owned atoms
   comm->reverse_comm_pair(this);
 }
