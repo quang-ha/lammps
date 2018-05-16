@@ -77,7 +77,7 @@ PairSPHConcASurfaceReactionMultiPhase::PairSPHConcASurfaceReactionMultiPhase(LAM
   mAthres = atom->dvector[imAthres];
 
   // set comm size needed by this pair
-  comm_forward = 2;
+  comm_forward = 4;
   comm_reverse = 2;
 }
 
@@ -133,6 +133,7 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
   // loop over neighbors of my atoms and do heat diffusion
   for (ii = 0; ii < inum; ii++)
     {
+      dmA[ii] = 0.0;
       dcA[ii] = 0.0;
     }
 
@@ -347,13 +348,17 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_forward_comm(int n, int *list, d
 					     int pbc_flag, int *pbc)
 {
   int i, j, m;
-
+  double *rmass = atom->rmass;
+  int *type = atom->type;
+  
   m = 0;
   for (i = 0; i < n; i++)
     {
       j = list[i];
       buf[m++] = cA[j];
       buf[m++] = dcA[j];
+      buf[m++] = rmass[j];
+      buf[m++] = type[j];
     }
   return m;
 }
@@ -363,12 +368,17 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_forward_comm(int n, int *list, d
 void PairSPHConcASurfaceReactionMultiPhase::unpack_forward_comm(int n, int first, double *buf)
 {
   int i, m, last;
+  double *rmass = atom->rmass;
+  int *type = atom->type;
+  
   m = 0;
   last = first + n;
   for (i = first; i < last; i++)
     {
       cA[i] = buf[m++];
       dcA[i] = buf[m++];
+      rmass[i] = buf[m++];
+      type[i] = buf[m++];
     }
 }
 
@@ -377,7 +387,7 @@ void PairSPHConcASurfaceReactionMultiPhase::unpack_forward_comm(int n, int first
 int PairSPHConcASurfaceReactionMultiPhase::pack_reverse_comm(int n, int first, double *buf)
 {
   int i,m,last;
-
+  
   m = 0;
   last = first + n;
   for (i = first; i < last; i++) {
@@ -392,7 +402,7 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_reverse_comm(int n, int first, d
 void PairSPHConcASurfaceReactionMultiPhase::unpack_reverse_comm(int n, int *list, double *buf)
 {
   int i,j,m;
-
+  
   m = 0;
   for (i = 0; i < n; i++) {
     j = list[i];

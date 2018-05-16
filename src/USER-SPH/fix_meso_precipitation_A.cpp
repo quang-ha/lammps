@@ -91,6 +91,9 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
 
   // Get mass
   rmass = atom->rmass;
+
+  // set comm size by this fix
+  comm_forward = 2;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -124,6 +127,7 @@ void FixMesoPrecipitationA::init() {
 void FixMesoPrecipitationA::initial_integrate(int vflag) {  
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+  int *type = atom->type;
   
   int i;
 
@@ -133,7 +137,8 @@ void FixMesoPrecipitationA::initial_integrate(int vflag) {
   for (i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
       cA[i] += dtf * dcA[i]; // half-step update of particle precipitation
-      rmass[i] += dtf * dmA[i];
+      if (type[i] == 2) // Only update mass for solid particles
+	rmass[i] += dtf * dmA[i];
     }
   }
 
@@ -146,6 +151,7 @@ void FixMesoPrecipitationA::final_integrate() {
   
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+  int *type = atom->type;
   
   if (igroup == atom->firstgroup)
     nlocal = atom->nfirst;
@@ -153,9 +159,12 @@ void FixMesoPrecipitationA::final_integrate() {
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
       cA[i] += dtf*dcA[i];
-      rmass[i] += dtf*dmA[i];
+      if (type[i] == 2) // Only update mass for solid particles
+	rmass[i] += dtf*dmA[i];
     }
   }
+
+  // comm->forward_comm_fix(this);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -216,7 +225,7 @@ void FixMesoPrecipitationA::end_of_step()
 	    if (jshortest > 0)
 	      {
 		rmass[i] = rmass[i] - mAthres[i];
-		rmass[jshortest] += mAthres[jshortest];
+		rmass[jshortest] = mAthres[jshortest];
 		type[jshortest] = 2; // convert the liquid to the solid
 		v[jshortest][0] = 0.0; // set velocity to 0.0
 		v[jshortest][1] = 0.0;
@@ -225,11 +234,13 @@ void FixMesoPrecipitationA::end_of_step()
 	  }
 	if (rmass[i] < 0.0) // convert solid to liquid, dissolution
 	  {
+	    printf("WARNING: Negative mass particles! \n");
 	    rmass[i] = 0.0;
 	    type[i] = 1;
 	  }
       }
   }
+  comm->forward_comm_fix(this);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -251,7 +262,6 @@ int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
   for (i = 0; i < n; i++)
     {
       j = list[i];
-      buf[m++] = cA[j];
       buf[m++] = rmass[j];
       buf[m++] = type[j];
     }
@@ -269,7 +279,6 @@ void FixMesoPrecipitationA::unpack_forward_comm(int n, int first, double *buf)
   last = first + n;
   for (i = first; i < last; i++)
     {
-      cA[i] = buf[m++];
       rmass[i] = buf[m++];
       type[i] = buf[m++];
     }
