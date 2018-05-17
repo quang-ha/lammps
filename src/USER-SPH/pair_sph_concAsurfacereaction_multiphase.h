@@ -29,7 +29,7 @@ namespace LAMMPS_NS {
     
   protected:
     double **cut, **phasecut;
-    double *cA, *dcA, *DA, *RA, *cAeq, *dmA, *mAthres;
+    double *cA, *dcA, *DA, *RA, *cAeq, *mA, *dmA, *mAthres;
     void allocate();
   };
 }

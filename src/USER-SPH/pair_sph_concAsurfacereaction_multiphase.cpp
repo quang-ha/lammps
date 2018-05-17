@@ -60,7 +60,7 @@ PairSPHConcASurfaceReactionMultiPhase::PairSPHConcASurfaceReactionMultiPhase(LAM
         "Can't find property RA for pair_style sph/concAsurfacereaction/multiphase");
   RA = atom->dvector[iRA];
 
-  // find the change in mass property
+  // find the change in mass of A property
   int fdmA;
   int idmA = atom->find_custom("dmA", fdmA);
   if (idmA < 0)
@@ -68,6 +68,14 @@ PairSPHConcASurfaceReactionMultiPhase::PairSPHConcASurfaceReactionMultiPhase(LAM
         "Can't find property dmA for pair_style sph/concAsurfacereaction/multiphase");
   dmA = atom->dvector[idmA];
 
+  // find the mass of A property
+  int fmA;
+  int imA = atom->find_custom("mA", fmA);
+  if (imA < 0)
+    error->all(FLERR,
+        "Can't find property mA for pair_style sph/concAsurfacereaction/multiphase");
+  mA = atom->dvector[imA];
+  
   // find the mass threshold property
   int fmAthres;
   int imAthres = atom->find_custom("mAthres", fmAthres);
@@ -77,7 +85,7 @@ PairSPHConcASurfaceReactionMultiPhase::PairSPHConcASurfaceReactionMultiPhase(LAM
   mAthres = atom->dvector[imAthres];
 
   // set comm size needed by this pair
-  comm_forward = 4;
+  comm_forward = 5;
   comm_reverse = 2;
 }
 
@@ -200,7 +208,8 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
 			 // The constants give better results...
 			 ni = rho[i] / imass;
 			 nj = rho[j] / jmass;
-			 deltacA = (1.0/(imass*sqrt(rsq)))*((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+			 deltacA = (1.0/(imass*sqrt(rsq)))*((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*
+			   (cA[i] - cA[j])*wfd;
 			 dcA[i] = dcA[i] + deltacA;
 		       }
 		     } // jtype fluid
@@ -239,13 +248,18 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
 		       dely = ytmp - x[j][1];
 		       delz = ztmp - x[j][2];
 		       rsq = delx * delx + dely * dely + delz * delz;
-		       
-		       jmass = rmass[j];
-		       
+		      
 		       d = phasecut[itype][jtype];
 		       if (sqrt(rsq) <= d)
 			 {
-			   dmA[i] = dmA[i] + RA[i]*jmass*(cA[j] - cAeq[j]);
+			   ni = rho[i] / imass;
+			   // diffusion into solid only when concentration exceed equilibrium
+			   printf("Adjecent concentration cA[j] %f cAeq[j] %f \n", cA[j], cAeq[j]);
+			   if (cA[j] >= cAeq[j])
+			     {
+			       dmA[i] = dmA[i] + (RA[i]/ni)*(cA[j] - cAeq[j]);
+			       printf("Calculating dmA[i] %f \n", dmA[i]);
+			     }
 			 }
 		     }
 		 } // check if j particles is within the domain
@@ -357,7 +371,8 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_forward_comm(int n, int *list, d
       j = list[i];
       buf[m++] = cA[j];
       buf[m++] = dcA[j];
-      buf[m++] = rmass[j];
+      buf[m++] = mA[j];
+      buf[m++] = dmA[j];
       buf[m++] = type[j];
     }
   return m;
@@ -377,7 +392,8 @@ void PairSPHConcASurfaceReactionMultiPhase::unpack_forward_comm(int n, int first
     {
       cA[i] = buf[m++];
       dcA[i] = buf[m++];
-      rmass[i] = buf[m++];
+      mA[i] = buf[m++];
+      dmA[i] = buf[m++];
       type[i] = buf[m++];
     }
 }

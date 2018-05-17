@@ -70,7 +70,7 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
   int iRA = atom->find_custom("RA", fRA);
   if (iRA < 0)
     error->all(FLERR,
-        "Can't find property RA for pair_style meso/precipitationA");
+        "Can't find property RA for fix meso/precipitationA");
   RA = atom->dvector[iRA];
 
   // find the solid-liquid interaction
@@ -78,19 +78,24 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
   int idmA = atom->find_custom("dmA", fdmA);
   if (idmA < 0)
     error->all(FLERR,
-        "Can't find property dmA for pair_style meso/precipitationA");
+        "Can't find property dmA for fix meso/precipitationA");
   dmA = atom->dvector[idmA];
 
+  // find the mass of A property
+  int fmA;
+  int imA = atom->find_custom("mA", fmA);
+  if (imA < 0)
+    error->all(FLERR,
+        "Can't find property mA for fix meso/precipitationA");
+  mA = atom->dvector[imA];
+  
   // find the mass threshold property
   int fmAthres;
   int imAthres = atom->find_custom("mAthres", fmAthres);
   if (imAthres < 0)
     error->all(FLERR,
-        "Can't find property mAthres for pair_style sph/concAprecipitation/multiphase");
+        "Can't find property mAthres for fix meso/precipitationA");
   mAthres = atom->dvector[imAthres];
-
-  // Get mass
-  rmass = atom->rmass;
 
   // set comm size by this fix
   comm_forward = 2;
@@ -139,7 +144,7 @@ void FixMesoPrecipitationA::initial_integrate(int vflag) {
     if (mask[i] & groupbit) {
       cA[i] += dtf * dcA[i]; // half-step update of particle precipitation
       if (type[i] == 2) // Only update mass for solid particles
-	rmass[i] += dtf * dmA[i];
+	mA[i] += dtf*dmA[i];
     }
   }
 }
@@ -159,7 +164,7 @@ void FixMesoPrecipitationA::final_integrate() {
     if (mask[i] & groupbit) {
       cA[i] += dtf*dcA[i];
       if (type[i] == 2) // Only update mass for solid particles
-	rmass[i] += dtf*dmA[i];
+	mA[i] += dtf*dmA[i];
     }
   }
 }
@@ -172,8 +177,6 @@ void FixMesoPrecipitationA::end_of_step()
 
   double delx, dely, delz;
   double shortest, xtmp, ytmp, ztmp, rsq, r;
-
-  double *rmass = atom->rmass;
   
   double **x = atom->x;
   double **v = atom->v;
@@ -188,7 +191,7 @@ void FixMesoPrecipitationA::end_of_step()
     // Only deal with solid particles
     if (itype == 2)
       {
-	if (rmass[i] > mAthres[i]) // precipitation
+	if (mA[i] > mAthres[i]) // precipitation
 	  {
 	    // Keep the position of the solid particle
 	    xtmp = x[i][0];
@@ -221,18 +224,19 @@ void FixMesoPrecipitationA::end_of_step()
 	    // if there is a closest liquid particle
 	    if (jshortest > 0)
 	      {
-		rmass[i] = rmass[i] - mAthres[i];
-		rmass[jshortest] = mAthres[jshortest];
+		printf("Check mA[i] %f and mAthres[i] %f \n", mA[i], mAthres[i]);
+	        mA[i] = mA[i] - mAthres[i];
+		mA[jshortest] = mAthres[jshortest];
 		type[jshortest] = 2; // convert the liquid to the solid
 		v[jshortest][0] = 0.0; // set velocity to 0.0
 		v[jshortest][1] = 0.0;
 		v[jshortest][2] = 0.0;
 	      }
 	  }
-	if (rmass[i] < 0.0) // convert solid to liquid, dissolution
+	if (mA[i] < 0.0) // convert solid to liquid, dissolution
 	  {
-	    printf("WARNING: Negative mass particles! \n");
-	    rmass[i] = 0.0;
+	    printf("WARNING: Negative mass particles! %d \n", dmA[i]);
+	    mA[i] = 0.0;
 	    type[i] = 1;
 	  }
       }
@@ -260,7 +264,7 @@ int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
   for (i = 0; i < n; i++)
     {
       j = list[i];
-      buf[m++] = rmass[j];
+      buf[m++] = mA[j];
       buf[m++] = type[j];
     }
   return m;
@@ -277,7 +281,7 @@ void FixMesoPrecipitationA::unpack_forward_comm(int n, int first, double *buf)
   last = first + n;
   for (i = first; i < last; i++)
     {
-      rmass[i] = buf[m++];
+      mA[i] = buf[m++];
       type[i] = buf[m++];
     }
 }
@@ -293,7 +297,7 @@ int FixMesoPrecipitationA::pack_reverse_comm(int n, int first, double *buf)
   last = first + n;
   for (i = first; i < last; i++)
     {
-      buf[m++] = rmass[i];
+      buf[m++] = mA[i];
       buf[m++] = type[i];
     }
   return m;
@@ -310,7 +314,7 @@ void FixMesoPrecipitationA::unpack_reverse_comm(int n, int *list, double *buf)
   for (i = 0; i < n; i++)
     {
       j = list[i];
-      rmass[j] = buf[m++];
+      mA[j] = buf[m++];
       type[j] = buf[m++];
     }
 }

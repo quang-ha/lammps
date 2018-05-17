@@ -46,7 +46,7 @@ class FixMesoPrecipitationA : public Fix {
  protected:
   double dtv,dtf;
   double *step_respa;
-  double *cA, *dcA, *dmA, *RA, *mAthres, *rmass;
+  double *cA, *dcA, *mA, *dmA, *RA, *mAthres, *rmass;
   int mass_require;
 
   class Pair *pair;
