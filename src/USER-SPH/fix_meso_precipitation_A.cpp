@@ -94,6 +94,7 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
 
   // set comm size by this fix
   comm_forward = 2;
+  comm_reverse = 2;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -141,8 +142,6 @@ void FixMesoPrecipitationA::initial_integrate(int vflag) {
 	rmass[i] += dtf * dmA[i];
     }
   }
-
-  // comm->forward_comm_fix(this);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -163,8 +162,6 @@ void FixMesoPrecipitationA::final_integrate() {
 	rmass[i] += dtf*dmA[i];
     }
   }
-
-  // comm->forward_comm_fix(this);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -241,6 +238,7 @@ void FixMesoPrecipitationA::end_of_step()
       }
   }
   comm->forward_comm_fix(this);
+  comm->reverse_comm_fix(this);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -281,5 +279,38 @@ void FixMesoPrecipitationA::unpack_forward_comm(int n, int first, double *buf)
     {
       rmass[i] = buf[m++];
       type[i] = buf[m++];
+    }
+}
+
+/* ---------------------------------------------------------------------- */
+
+int FixMesoPrecipitationA::pack_reverse_comm(int n, int first, double *buf)
+{
+  int i,m,last;
+  int *type = atom->type;
+  
+  m = 0;
+  last = first + n;
+  for (i = first; i < last; i++)
+    {
+      buf[m++] = rmass[i];
+      buf[m++] = type[i];
+    }
+  return m;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixMesoPrecipitationA::unpack_reverse_comm(int n, int *list, double *buf)
+{
+  int i,j,m;
+  int *type = atom->type;
+  
+  m = 0;
+  for (i = 0; i < n; i++)
+    {
+      j = list[i];
+      rmass[j] = buf[m++];
+      type[j] = buf[m++];
     }
 }
