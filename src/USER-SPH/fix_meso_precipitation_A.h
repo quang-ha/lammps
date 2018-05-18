@@ -29,6 +29,7 @@ class FixMesoPrecipitationA : public Fix {
   FixMesoPrecipitationA(class LAMMPS *, int, char **);
   int setmask();
   virtual void init();
+  virtual void init_list(int, class NeighList *);
   virtual void initial_integrate(int);
   virtual void final_integrate();
   virtual void end_of_step();

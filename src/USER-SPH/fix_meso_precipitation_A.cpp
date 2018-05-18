@@ -107,7 +107,7 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
 
   // set comm size by this fix
   comm_forward = 3;
-  comm_reverse = 2;
+  comm_reverse = 3;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -132,6 +132,13 @@ void FixMesoPrecipitationA::init() {
   neighbor->requests[irequest]->fix = 1;
   neighbor->requests[irequest]->half = 0;
   neighbor->requests[irequest]->full = 1;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixMesoPrecipitationA::init_list(int, NeighList *ptr)
+{
+  list = ptr;
 }
 
 /* ----------------------------------------------------------------------
@@ -181,7 +188,7 @@ void FixMesoPrecipitationA::final_integrate() {
 
 void FixMesoPrecipitationA::end_of_step()
 {
-  int i, j, itype, jtype, jshortest;
+  int i, j, ii, jj, itype, jtype, jshortest;
 
   double delx, dely, delz;
   double shortest, xtmp, ytmp, ztmp, rsq, r;
@@ -192,7 +199,10 @@ void FixMesoPrecipitationA::end_of_step()
 
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+  int* numneigh = list->numneigh;
 
+  bool foundShortest;
+  
   for (i = 0; i < nlocal; i++) {
     itype = type[i];
 
@@ -205,32 +215,39 @@ void FixMesoPrecipitationA::end_of_step()
 	    xtmp = x[i][0];
 	    ytmp = x[i][1];
 	    ztmp = x[i][2];
+	    
+	    // Check neighbouring atoms
+	    int** firstneigh = list->firstneigh;
+	    int jnum = numneigh[i];
+	    int* jlist = firstneigh[i];
     	    
 	    // Then need to find the closest fluid particles
 	    shortest = 1000.0;
-	    jshortest = -1;
-	    
-	    for (j=0; j<nlocal; j++)
-	      {
-		jtype = type[j];
-		
-		if (jtype == 1) // if liquid particle then check for shortest distance
-		  {
-		    delx = xtmp - x[j][0];
-		    dely = ytmp - x[j][1];
-		    delz = ztmp - x[j][2];
-		    r = sqrt(delx*delx + dely*dely + delz*delz);
-		    
-		    if (r < shortest)
-		      {
-			shortest = r;
-			jshortest = j;
-		      }
-		  } // ifliquid
-	      } // for loop to find closest fluid
+	    foundShortest = false;
 
+	    for (jj = 0; jj < jnum; jj++) {
+	      j = jlist[jj];
+	      j &= NEIGHMASK;	    
+	      jtype = type[j];
+	      
+	      if (jtype == 1) // if liquid particle then check for shortest distance
+		{
+		  delx = xtmp - x[j][0];
+		  dely = ytmp - x[j][1];
+		  delz = ztmp - x[j][2];
+		  r = sqrt(delx*delx + dely*dely + delz*delz);
+		  
+		  if (r < shortest)
+		    {
+		      foundShortest = true;
+		      shortest = r;
+		      jshortest = j;
+		    }
+		} // ifliquid
+	    } // for loop to find closest fluid
+	    
 	    // if there is a closest liquid particle
-	    if (jshortest > 0)
+	    if (foundShortest)
 	      {
 		// printf("WARNING: Precipitation particles! \n");
 	        mA[i] = mA[i] - mAthres[i];
@@ -310,6 +327,7 @@ int FixMesoPrecipitationA::pack_reverse_comm(int n, int first, double *buf)
   for (i = first; i < last; i++)
     {
       buf[m++] = mA[i];
+      buf[m++] = cA[i];
       buf[m++] = type[i];
     }
   return m;
@@ -327,6 +345,7 @@ void FixMesoPrecipitationA::unpack_reverse_comm(int n, int *list, double *buf)
     {
       j = list[i];
       mA[j] = buf[m++];
+      cA[j] = buf[m++];
       type[j] = buf[m++];
     }
 }
