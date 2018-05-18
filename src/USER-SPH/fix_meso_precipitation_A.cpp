@@ -106,7 +106,7 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
   mAthres = atom->dvector[imAthres];
 
   // set comm size by this fix
-  comm_forward = 2;
+  comm_forward = 3;
   comm_reverse = 2;
 }
 
@@ -242,21 +242,17 @@ void FixMesoPrecipitationA::end_of_step()
 		v[jshortest][2] = 0.0;
 	      }
 	  }
-	else if (mA[i] < -mAthres[i]) // Dissolution
+	else if (mA[i] <= -mAthres[i]) // Dissolution
 	  {
 	    // printf("WARNING: Dissolution particles! \n");
 	    mA[i] = 0.0;
 	    type[i] = 1;
 	    cA[i] = cAeq[i];
 	  }
-	else
-	  {
-	    printf("Out of nowhere! \n");
-	  }
       }
   }
   comm->forward_comm_fix(this);
-  comm->reverse_comm_fix(this);
+  // comm->reverse_comm_fix(this);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -279,6 +275,7 @@ int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
     {
       j = list[i];
       buf[m++] = mA[j];
+      buf[m++] = cA[j];
       buf[m++] = type[j];
     }
   return m;
@@ -296,6 +293,7 @@ void FixMesoPrecipitationA::unpack_forward_comm(int n, int first, double *buf)
   for (i = first; i < last; i++)
     {
       mA[i] = buf[m++];
+      cA[i] = buf[m++];
       type[i] = buf[m++];
     }
 }
