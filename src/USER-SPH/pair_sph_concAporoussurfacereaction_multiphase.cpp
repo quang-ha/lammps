@@ -253,7 +253,7 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::compute(int eflag, int vflag) 
 		      d = phasecut[itype][jtype];
 		      if (sqrt(rsq) <= d)
 			{
-			  // Increase in mass - preparing for precipitation
+			  // Change in mass
 			  dmA[i] = dmA[i] + RA[i]*jmass*(cA[j] - cAeq[j]);
 			}
 		    }
