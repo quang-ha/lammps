@@ -57,6 +57,14 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
         "Can't find property cA for fix meso/precipitationA"); 
   cA = atom->dvector[icA];
 
+  // find the equlibrium concentration property
+  int fcAeq;
+  int icAeq = atom->find_custom("cAeq", fcAeq);
+  if (icAeq < 0)
+    error->all(FLERR,
+        "Can't find property cAeq for fix meso/precipitationA");
+  cAeq = atom->dvector[icAeq];
+  
   // find the concentration property
   int fdcA;
   int idcA = atom->find_custom("dcA", fdcA);
@@ -191,7 +199,7 @@ void FixMesoPrecipitationA::end_of_step()
     // Only deal with solid particles
     if (itype == 2)
       {
-	if (mA[i] > mAthres[i]) // precipitation
+	if (mA[i] >= mAthres[i]) // precipitation
 	  {
 	    // Keep the position of the solid particle
 	    xtmp = x[i][0];
@@ -224,20 +232,26 @@ void FixMesoPrecipitationA::end_of_step()
 	    // if there is a closest liquid particle
 	    if (jshortest > 0)
 	      {
-		printf("Check mA[i] %f and mAthres[i] %f \n", mA[i], mAthres[i]);
+		// printf("WARNING: Precipitation particles! \n");
 	        mA[i] = mA[i] - mAthres[i];
 		mA[jshortest] = mAthres[jshortest];
 		type[jshortest] = 2; // convert the liquid to the solid
+		cA[jshortest] = 0.0; // concentration is 0
 		v[jshortest][0] = 0.0; // set velocity to 0.0
 		v[jshortest][1] = 0.0;
 		v[jshortest][2] = 0.0;
 	      }
 	  }
-	if (mA[i] < 0.0) // convert solid to liquid, dissolution
+	else if (mA[i] < -mAthres[i]) // Dissolution
 	  {
-	    printf("WARNING: Negative mass particles! %d \n", dmA[i]);
+	    // printf("WARNING: Dissolution particles! \n");
 	    mA[i] = 0.0;
 	    type[i] = 1;
+	    cA[i] = cAeq[i];
+	  }
+	else
+	  {
+	    printf("Out of nowhere! \n");
 	  }
       }
   }

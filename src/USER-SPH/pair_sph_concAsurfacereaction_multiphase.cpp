@@ -253,13 +253,7 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
 		       if (sqrt(rsq) <= d)
 			 {
 			   ni = rho[i] / imass;
-			   // diffusion into solid only when concentration exceed equilibrium
-			   printf("Adjecent concentration cA[j] %f cAeq[j] %f \n", cA[j], cAeq[j]);
-			   if (cA[j] >= cAeq[j])
-			     {
-			       dmA[i] = dmA[i] + (RA[i]/ni)*(cA[j] - cAeq[j]);
-			       printf("Calculating dmA[i] %f \n", dmA[i]);
-			     }
+			   dmA[i] = dmA[i] + (RA[i]/ni)*(cA[j] - cAeq[j]);
 			 }
 		     }
 		 } // check if j particles is within the domain
