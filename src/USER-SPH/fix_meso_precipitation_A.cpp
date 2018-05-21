@@ -251,7 +251,7 @@ void FixMesoPrecipitationA::end_of_step()
 	      {
 		// printf("WARNING: Precipitation particles! \n");
 	        mA[i] = mA[i] - mAthres[i];
-		mA[jshortest] = mAthres[jshortest];
+		mA[jshortest] = 0.0;
 		type[jshortest] = 2; // convert the liquid to the solid
 		cA[jshortest] = 0.0; // concentration is 0.0
 		dcA[jshortest] = 0.0; // change in concentration is also 0.0
@@ -266,7 +266,8 @@ void FixMesoPrecipitationA::end_of_step()
 	    mA[i] = 0.0; // mass becomes 0.0
 	    dmA[i] = 0.0; // change in mass also becomes 0.0
 	    type[i] = 1; // convert solid to liquid
-	    cA[i] = cAeq[i];
+	    cA[i] = cAeq[i]; // concentration reach back to equilibrium
+	    dcA[i] = 0.0; // change of concentration to 0.0
 	  }
       }
   }
