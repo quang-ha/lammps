@@ -142,6 +142,7 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::compute(int eflag, int vflag) 
   for (ii = 0; ii < inum; ii++)
     {
       dcA[ii] = 0.0;
+      dmA[ii] = 0.0;
     }
 
   // Communicate the local cA to the ghost atoms
@@ -220,6 +221,13 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::compute(int eflag, int vflag) 
 		} // jtype solid
 	    } // check if j particle is inside
 	} // jj loop
+
+	// extra reaction for solid
+	if (itype == 2)
+	  {
+	    // Self-decay for porous
+	    dcA[i] = dcA[i] - kA[i]*(cA[i] - cAeq[i]);
+	  }
       } // check i atom is inside domain
   } // ii loop
   // Communicate the ghost dcA and dmA to the locally owned atoms
