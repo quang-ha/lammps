@@ -333,7 +333,6 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_forward_comm(int n, int *list, d
       buf[m++] = dcA[j];
       buf[m++] = mA[j];
       buf[m++] = dmA[j];
-      buf[m++] = type[j];
     }
   return m;
 }
@@ -353,7 +352,6 @@ void PairSPHConcASurfaceReactionMultiPhase::unpack_forward_comm(int n, int first
       dcA[i] = buf[m++];
       mA[i] = buf[m++];
       dmA[i] = buf[m++];
-      type[i] = buf[m++];
     }
 }
 
@@ -369,7 +367,6 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_reverse_comm(int n, int first, d
   for (i = first; i < last; i++) {
     buf[m++] = dcA[i];
     buf[m++] = dmA[i];
-    buf[m++] = type[i];
   }
   return m;
 }
@@ -387,6 +384,5 @@ void PairSPHConcASurfaceReactionMultiPhase::unpack_reverse_comm(int n, int *list
 
     dcA[j] += buf[m++];
     dmA[j] += buf[m++];
-    type[j] = buf[m++];
   }
 }
