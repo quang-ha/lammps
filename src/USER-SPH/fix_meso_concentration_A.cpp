@@ -61,9 +61,6 @@ FixMesoConcentrationA::FixMesoConcentrationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "Can't find property dcA for fix meso/concAdiffusion");  
   dcA = atom->dvector[idcA];
-
-  // // set comm size needed by this fix
-  // comm_forward = 1;
 }
 
 /* ---------------------------------------------------------------------- */
