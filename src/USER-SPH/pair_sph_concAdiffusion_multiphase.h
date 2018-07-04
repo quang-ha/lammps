@@ -31,6 +31,8 @@ namespace LAMMPS_NS {
     double **cut;
     double *cA, *dcA, *DA;
     double xlo,xhi,ylo,yhi,zlo,zhi;
+    bool bc_cA; // Turn periodicity for concentration on or off;
+                // default off
     void allocate();
   };
 }

@@ -159,7 +159,7 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::compute(int eflag, int vflag) 
     // check if the i particles is within the domain
     if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
 	     ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
-	     ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2]))
+	     ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2]) || (bc_cA) )
       {
 	// Diffusion for both solid and liquid
 	jlist = firstneigh[i];
@@ -175,7 +175,7 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::compute(int eflag, int vflag) 
 	  // check if the j particles is within the domain
 	  if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
 		   x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-		   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
+		   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]) || (bc_cA) )
 	    {
 	      delx = xtmp - x[j][0];
 	      dely = ytmp - x[j][1];
@@ -267,7 +267,7 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::settings(int narg, char **arg)
  ------------------------------------------------------------------------- */
 
 void PairSPHConcAPorousSurfaceReactionMultiPhase::coeff(int narg, char **arg) {
-  if (narg != 4)
+  if (narg != 5)
     error->all(FLERR,"Incorrect number of args for pair_style sph/concprecipitation coefficients");
   if (!allocated)
     allocate();
@@ -278,6 +278,9 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::coeff(int narg, char **arg) {
   
   double cut_one = force->numeric(FLERR,arg[2]);
   double phasecut_one = force->numeric(FLERR,arg[3]);
+
+  // Variable to check whether periodicity for cA is on or off
+  bc_cA = force->numeric(FLERR, arg[4]);
   
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {

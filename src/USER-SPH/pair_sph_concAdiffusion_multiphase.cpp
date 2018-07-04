@@ -115,7 +115,7 @@ void PairSPHConcADiffusionMultiPhase::compute(int eflag, int vflag) {
     // check if the i particles is within the domain
     if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
 	     ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
-	     ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2]))
+	     ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2]) || (bc_cA) )
        {
 	 jlist = firstneigh[i];
 	 jnum = numneigh[i];
@@ -129,7 +129,7 @@ void PairSPHConcADiffusionMultiPhase::compute(int eflag, int vflag) {
 	   // check if the j particles is within the domain
 	   if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
 		    x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-		    x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
+		    x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]) || (bc_cA) )
 	     {
 	       delx = xtmp - x[j][0];
 	       dely = ytmp - x[j][1];
@@ -196,7 +196,7 @@ void PairSPHConcADiffusionMultiPhase::allocate() {
 void PairSPHConcADiffusionMultiPhase::settings(int narg, char **arg) {
   if (narg != 0)
     error->all(FLERR,
-        "Illegal number of setting arguments for pair_style sph/concdiffusion");
+        "Illegal number of setting arguments for pair_style sph/concAdiffusion/multiphase");
 }
 
 /* ----------------------------------------------------------------------
@@ -204,8 +204,9 @@ void PairSPHConcADiffusionMultiPhase::settings(int narg, char **arg) {
  ------------------------------------------------------------------------- */
 
 void PairSPHConcADiffusionMultiPhase::coeff(int narg, char **arg) {
-  if (narg != 3)
-    error->all(FLERR,"Incorrect number of args for pair_style sph/concdiffusion coefficients");
+  if (narg != 4)
+    error->all(FLERR,
+	       "Incorrect number of args for pair_style sph/concAdiffusion/multiphase coefficients");
   if (!allocated)
     allocate();
 
@@ -214,7 +215,10 @@ void PairSPHConcADiffusionMultiPhase::coeff(int narg, char **arg) {
   force->bounds(FLERR,arg[1], atom->ntypes, jlo, jhi);
   
   double cut_one = force->numeric(FLERR,arg[2]);
-  
+
+  // Variable to check whether periodicity for cA is on or off
+  bc_cA = force->numeric(FLERR, arg[3]);
+    
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
     for (int j = MAX(jlo,i); j <= jhi; j++) {

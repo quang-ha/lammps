@@ -30,6 +30,8 @@ namespace LAMMPS_NS {
   protected:
     double **cut, **phasecut;
     double *cA, *dcA, *DA, *RA, *kA, *cAeq, *dmA, *mAthres;
+    bool bc_cA; // Turn periodicity for concentration on or off;
+                // default off
     void allocate();
   };
 }
