@@ -61,6 +61,11 @@ class Atom : protected Pointers {
   double *radius,*rmass;
   int *ellipsoid,*line,*tri,*body;
 
+  // SPIN package
+
+  double **sp;
+  double **fm;
+
   // PERI package
 
   double *vfrac,*s0;
@@ -148,6 +153,10 @@ class Atom : protected Pointers {
 
   int colorgradient_flag; // for SPH multiphase
   int dpd_flag,edpd_flag,tdpd_flag;
+
+  //USER-SPIN package
+
+  int sp_flag;
 
   // USER-SMD package
 
