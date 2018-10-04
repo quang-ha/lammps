@@ -90,7 +90,7 @@ PairSPHConcALangmuirSurfaceReaction::PairSPHConcALangmuirSurfaceReaction(LAMMPS 
   if (ithetaA < 0)
     error->all(FLERR,
         "Can't find property thetaA for pair_style sph/concALangmuirsurfacereaction");
-  thetaA = atom->dvector[thetaA];
+  thetaA = atom->dvector[ithetaA];
 
   // Find the maximum surface concentration
   int fsA;
@@ -129,7 +129,7 @@ void PairSPHConcALangmuirSurfaceReaction::init_style()
 void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
   int i, j, ii, jj, inum, jnum, itype, jtype;
   double xtmp, ytmp, ztmp, delx, dely, delz;
-  double xNij, yNij, zNij;
+  double xNij, yNij, zNij, Nij;
   
   int *ilist, *jlist, *numneigh, **firstneigh;
   double imass, jmass, h, ih, ihsq;
@@ -158,7 +158,7 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
   // loop over neighbors of my atoms and do heat diffusion
   for (ii = 0; ii < inum; ii++)
     {
-      dmA[ii] = 0.0;
+      dyA[ii] = 0.0;
       dcA[ii] = 0.0;
     }
 
@@ -240,7 +240,7 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
 		       // Calculate the exchange in concentration
 		       ni = rho[i] / imass;
 		       nj = rho[j] / jmass;
-		       deltacA = (kAa[i]*cA[i]*(1-thetaA[j])*(1-thetaA[j]) - (kAd[i]*theta[j]*theta[j])/(ni*imass))*
+		       deltacA = (kAa[i]*cA[i]*(1-thetaA[j])*(1-thetaA[j]) - (kAd[i]*thetaA[j]*thetaA[j])/(ni*imass))*
 			 (2.0*Nij*wfd)/(nj+ni);
 		       dcA[i] = dcA[i] - deltacA;
 		       dyA[j] = dyA[j] + deltacA;
@@ -323,7 +323,6 @@ double PairSPHConcALangmuirSurfaceReaction::init_one(int i, int j) {
   }
 
   cut[j][i] = cut[i][j];
-  phasecut[j][i] = phasecut[i][j];
   
   return cut[i][j];
 }
