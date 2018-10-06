@@ -235,13 +235,14 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
                        xNij = cg[i][0] + cg[j][0];
 		       yNij = cg[i][1] + cg[j][1];
 		       zNij = cg[i][2] + cg[j][2];
-		       // Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
-		       Nij = (xNij*delx + yNij*dely + zNij*delz)/sqrt(rsq);
+		       Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
+		       // Nij = (xNij*delx + yNij*dely + zNij*delz)/sqrt(rsq);
 		       // Calculate the exchange in concentration
 		       ni = rho[i] / imass;
 		       nj = rho[j] / jmass;
 		       deltacA = (kAa[i]*cA[i]*(1-thetaA[j])*(1-thetaA[j]) - (kAd[i]*thetaA[j]*thetaA[j])/(ni*imass))*
 			 (2.0*Nij*wfd)/(nj+ni);
+                       // printf("This is deltacA %f \n", deltacA);
 		       dcA[i] = dcA[i] - deltacA;
 		       dyA[j] = dyA[j] + deltacA;
 		     } // jtype solid

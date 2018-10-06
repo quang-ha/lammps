@@ -253,6 +253,7 @@ void FixMesoConcALangmuir::end_of_step()
 
     // Only update maximum mass fraction for solid particles
     if (itype == 2) {
+      imass = rmass[i];
       // Keep the position of the solid particle
       xtmp = x[i][0];
       ytmp = x[i][1];
@@ -265,42 +266,51 @@ void FixMesoConcALangmuir::end_of_step()
 
       // Then need to find the closest fluid particles
       for (jj = 0; jj < jnum; jj++) {
-	j = jlist[jj];
-	j &= NEIGHMASK;
-	jtype = type[j];
+        j = jlist[jj];
+        j &= NEIGHMASK;
+        jtype = type[j];
 
-	// Check if j is within the support kernel
-	if (rsq < h) {
-	  ih = 1.0/h;
+        // Calculate the distance between the particles
+        delx = xtmp - x[j][0];
+        dely = ytmp - x[j][1];
+        delz = ztmp - x[j][2];
+        rsq = delx * delx + dely * dely + delz * delz;
 
-	  // kernel function
-	  if (domain->dimension == 3) {
-	    wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
-	    wfd = wfd*ih*ih*ih*ih;
-	    wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
-	    } else {
-	    wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
-	    wfd = wfd*ih*ih*ih;
-	    wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
-	  }
+        // Check if j is within the support kernel
+        if (rsq < h) {
+          ih = 1.0/h;
 
-	  // Perform interaction calculation
-	  if (jtype == 1) { // only for fluid particles
-	    // Calculate the normal vector of colour gradient
-	    xNij = cg[i][0] + cg[j][0];
-	    yNij = cg[i][1] + cg[j][1];
-	    zNij = cg[i][2] + cg[j][2];
-	    // Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
-	    Nij = (xNij*delx + yNij*dely + zNij*delz)/sqrt(rsq);
-	    // Calculate the exchange in concentration
-	    ni = rho[i] / imass;
-	    nj = rho[j] / jmass;
-	    yAmax[i] = yAmax[i] + (Nij*wfd*sA[i])/(ni*nj*imass);
-	  } // jtype fluid
-	} // loop inside support kernel
+          // kernel function
+          if (domain->dimension == 3) {
+            wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
+            wfd = wfd*ih*ih*ih*ih;
+            wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
+            } else {
+            wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
+            wfd = wfd*ih*ih*ih;
+            wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
+          }
+
+          // Perform interaction calculation
+          if (jtype == 1) { // only for fluid particles
+            jmass = rmass[j];
+            // Calculate the normal vector of colour gradient
+            xNij = cg[i][0] + cg[j][0];
+            yNij = cg[i][1] + cg[j][1];
+            zNij = cg[i][2] + cg[j][2];
+            printf("check cg %f %f %f \n", cg[i][0], cg[i][1], cg[i][2]);
+            // Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
+            Nij = xNij*delx + yNij*dely + zNij*delz;
+            // Calculate the exchange in concentration
+            ni = rho[i] / imass;
+            nj = rho[j] / jmass;
+            yAmax[i] = yAmax[i] + (Nij*wfd*sA[i])/(ni*nj*imass);
+            printf("calculated %f \n", Nij);
+          } // jtype fluid
+        } // loop inside support kernel
       } // for loop jj
       // Calculate the absorbed concentration
-      thetaA[i] = yA[i]/yAmax[i];
+      thetaA[i] = (yAmax[i] == 0.0) ? 0.0 : (yA[i]/yAmax[i]);
     } // if i type is solid
   } // loop through i
   // comm->forward_comm_fix(this);
