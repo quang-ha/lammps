@@ -185,7 +185,7 @@ void FixMesoConcALangmuir::initial_integrate(int vflag) {
     if (mask[i] & groupbit) {
       cA[i] += dtf * dcA[i]; // half-step update of particle concentraion
       if (type[i] == 2) // Only update mass fraction for solid particles
-	yA[i] += dtf*dyA[i];
+        yA[i] += dtf*dyA[i];
     }
   }
 }
@@ -204,7 +204,7 @@ void FixMesoConcALangmuir::final_integrate() {
     if (mask[i] & groupbit) {
       cA[i] += dtf*dcA[i];
       if (type[i] == 2) // Only update mass fraction for solid particels
-	yA[i] += dtf*dyA[i];
+        yA[i] += dtf*dyA[i];
     }
   }
 }
@@ -239,13 +239,6 @@ void FixMesoConcALangmuir::end_of_step()
   ilist = list->ilist;
   numneigh = list->numneigh;
   firstneigh = list->firstneigh;
-
-  // loop over neighbors of my atoms and do heat diffusion
-  for (ii = 0; ii < inum; ii++)
-    {
-      dyA[ii] = 0.0;
-      dcA[ii] = 0.0;
-    }
 
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
@@ -298,19 +291,27 @@ void FixMesoConcALangmuir::end_of_step()
             xNij = cg[i][0] + cg[j][0];
             yNij = cg[i][1] + cg[j][1];
             zNij = cg[i][2] + cg[j][2];
-            printf("check cg %f %f %f \n", cg[i][0], cg[i][1], cg[i][2]);
+            // Normalised the value
+            double Nijsq = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
+            xNij = xNij/Nijsq; yNij = yNij/Nijsq; zNij = zNij/Nijsq;
+            // printf("check cg %f %f %f \n", cg[i][0], cg[i][1], cg[i][2]);
             // Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
-            Nij = xNij*delx + yNij*dely + zNij*delz;
+            Nij = (Nijsq == 0.0) ? 0.0 : (xNij*delx + yNij*dely + zNij*delz);
+            // printf("calculated %f \n", Nij);
+            // Nij = 1.0;
             // Calculate the exchange in concentration
             ni = rho[i] / imass;
             nj = rho[j] / jmass;
             yAmax[i] = yAmax[i] + (Nij*wfd*sA[i])/(ni*nj*imass);
-            printf("calculated %f \n", Nij);
+            // printf("calculated %f \n", (Nij*wfd*sA[i])/(ni*nj*imass));
           } // jtype fluid
         } // loop inside support kernel
       } // for loop jj
       // Calculate the absorbed concentration
+      // printf("oh noes %f \n", yA[i]);
+      // printf("oh noes noes %f \n", yAmax[i]);
       thetaA[i] = (yAmax[i] == 0.0) ? 0.0 : (yA[i]/yAmax[i]);
+      // printf("calculated %f \n", thetaA[i]);
     } // if i type is solid
   } // loop through i
   // comm->forward_comm_fix(this);

@@ -231,28 +231,43 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
 		       dcA[i] = dcA[i] + deltacA;
 		     }
 		     else { // if jtype is solid
+                       jmass = rmass[j];
 		       // Calculate the normal vector of colour gradient
                        xNij = cg[i][0] + cg[j][0];
 		       yNij = cg[i][1] + cg[j][1];
 		       zNij = cg[i][2] + cg[j][2];
-		       Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
-		       // Nij = (xNij*delx + yNij*dely + zNij*delz)/sqrt(rsq);
+                       // Normalised the value
+                       double Nijsq = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
+                       xNij = xNij/Nijsq; yNij = yNij/Nijsq; zNij = zNij/Nijsq;
+		       // Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
+		       Nij = (Nijsq == 0.0) ? 0.0 : (xNij*delx + yNij*dely + zNij*delz);
+                       // Nij = 1.0;
 		       // Calculate the exchange in concentration
 		       ni = rho[i] / imass;
 		       nj = rho[j] / jmass;
 		       deltacA = (kAa[i]*cA[i]*(1-thetaA[j])*(1-thetaA[j]) - (kAd[i]*thetaA[j]*thetaA[j])/(ni*imass))*
-			 (2.0*Nij*wfd)/(nj+ni);
+		         (-2.0*Nij*wfd)/(nj+ni);
+                       // printf("checking kAa[i] %f \n", kAa[i]);
+                       // printf("checking kAd[i] %f \n", kAd[i]);
+                       // printf("checking nj %f nj %f \n", ni, nj);
+                       // printf("checking thetaA[i] %f \n", thetaA[i]);
+                       // printf("checking thetaA[j] %f \n", thetaA[j]);
+                       // printf("checking cA %f \n", cA[i]);
+                       // printf("calculated Nij %f \n", Nij);
+                       // printf("sq %f \n", Nijsq);
                        // printf("This is deltacA %f \n", deltacA);
+                       // printf("internal %d dcA[i] %f \n", i, dcA[i]);
 		       dcA[i] = dcA[i] - deltacA;
-		       dyA[j] = dyA[j] + deltacA;
+		       dyA[j] = dyA[j] - deltacA;
 		     } // jtype solid
 		   } // check within support kernel
 		 } // check if j particle is inside
 	     } // jj loop
 	   } //itype fluid
+         // if (dcA[i] != 0.0)
+         //   printf("external %d dcA[i] %f \n", i, dcA[i]);
        } // check i atom is inside domain
   } // ii loop
-  
   // Communicate the ghost dcA and dmA to the locally owned atoms
   comm->reverse_comm_pair(this);
 }
