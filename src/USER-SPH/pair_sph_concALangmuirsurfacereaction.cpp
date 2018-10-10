@@ -173,8 +173,6 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
     ytmp = x[i][1];
     ztmp = x[i][2];	
 
-    // // Check colour gradient
-    // printf("itype %d xs %f ys %f zs %f cg %f %f %f \n", itype, xtmp, ytmp, ztmp, cg[i][0], cg[i][1], cg[i][2]);
     // check if the i particles is within the domain
     if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
 	     ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
@@ -230,45 +228,31 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
 		       nj = rho[j] / jmass;
 		       deltacA = (1.0/(imass*sqrt(rsq)))*
 			 ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
-		       // printf("liquid - i %d itype %d j %d jtype %d deltacA %f \n", i, itype, j, jtype, deltacA);
 		       dcA[i] = dcA[i] + deltacA;
 		     }
 		     else { // if jtype is solid
                        jmass = rmass[j];
 		       // Calculate the normal vector of colour gradient
-                       xNij = cg[i][0] + cg[j][0];
-		       yNij = cg[i][1] + cg[j][1];
-		       zNij = cg[i][2] + cg[j][2];
-                       // Normalised the value
+                       // Since the colour gradient is pointing AWAY from the surface, this needs to be modified
+                       // to match the definition from Ryan's paper
+                       xNij = -cg[i][0] + cg[j][0];
+		       yNij = -cg[i][1] + cg[j][1];
+		       zNij = -cg[i][2] + cg[j][2];
+                       // Check if Nijsq is zero
                        double Nijsq = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
-                       xNij = -xNij/Nijsq; yNij = -yNij/Nijsq; zNij = -zNij/Nijsq;
-		       // Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
 		       Nij = (Nijsq == 0.0) ? 0.0 : xNij*delx + yNij*dely + zNij*delz;
-                       // Nij = 1.0;
 		       // Calculate the exchange in concentration
 		       ni = rho[i] / imass;
 		       nj = rho[j] / jmass;
 		       deltacA = (kAa[i]*cA[i]*(1-thetaA[j])*(1-thetaA[j]) - (kAd[i]*thetaA[j]*thetaA[j])/(ni*imass))*
-		         (-2.0*(itype-jtype)*Nij*wfd)/(nj+ni);
-                       // printf("checking kAa[i] %f \n", kAa[i]);
-                       // printf("checking kAd[i] %f \n", kAd[i]);
-                       // printf("checking nj %f nj %f \n", ni, nj);
-                       // printf("checking thetaA[i] %f \n", thetaA[i]);
-                       // printf("checking thetaA[j] %f \n", thetaA[j]);
-                       // printf("checking cA %f \n", cA[i]);
-                       // printf("calculated Nij %f \n", Nij);
-                       // printf("sq %f \n", Nijsq);
-                       // printf("solid - i %d itype %d j %d jtype %d deltacA %f \n", i, itype, j, jtype, deltacA);
-                       // printf("internal %d dcA[i] %f \n", i, dcA[i]);
-		       dcA[i] = dcA[i] + deltacA;
+		         (2.0*(itype-jtype)*Nij*wfd)/(nj+ni);
+		       dcA[i] = dcA[i] - deltacA;
 		       dyA[j] = dyA[j] + deltacA;
 		     } // jtype solid
 		   } // check within support kernel
 		 } // check if j particle is inside
 	     } // jj loop
 	   } //itype fluid
-         // if (dcA[i] != 0.0)
-         //   printf("external %d dcA[i] %f \n", i, dcA[i]);
        } // check i atom is inside domain
   } // ii loop
   // Communicate the ghost dcA and dmA to the locally owned atoms
