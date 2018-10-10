@@ -173,6 +173,8 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
     ytmp = x[i][1];
     ztmp = x[i][2];	
 
+    // // Check colour gradient
+    // printf("itype %d xs %f ys %f zs %f cg %f %f %f \n", itype, xtmp, ytmp, ztmp, cg[i][0], cg[i][1], cg[i][2]);
     // check if the i particles is within the domain
     if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
 	     ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
@@ -195,9 +197,9 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
 			x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
 			x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
 		 {
-		   delx = xtmp - x[j][0];
-		   dely = ytmp - x[j][1];
-		   delz = ztmp - x[j][2];
+		   delx = x[j][0] - xtmp;
+		   dely = x[j][1] - ytmp;
+		   delz = x[j][2] - ztmp;
 		   rsq = delx * delx + dely * dely + delz * delz;
 		   
 		   // Check if j is within the support kernel
@@ -228,6 +230,7 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
 		       nj = rho[j] / jmass;
 		       deltacA = (1.0/(imass*sqrt(rsq)))*
 			 ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+		       // printf("liquid - i %d itype %d j %d jtype %d deltacA %f \n", i, itype, j, jtype, deltacA);
 		       dcA[i] = dcA[i] + deltacA;
 		     }
 		     else { // if jtype is solid
@@ -238,15 +241,15 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
 		       zNij = cg[i][2] + cg[j][2];
                        // Normalised the value
                        double Nijsq = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
-                       xNij = xNij/Nijsq; yNij = yNij/Nijsq; zNij = zNij/Nijsq;
+                       xNij = -xNij/Nijsq; yNij = -yNij/Nijsq; zNij = -zNij/Nijsq;
 		       // Nij = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
-		       Nij = (Nijsq == 0.0) ? 0.0 : (xNij*delx + yNij*dely + zNij*delz);
+		       Nij = (Nijsq == 0.0) ? 0.0 : xNij*delx + yNij*dely + zNij*delz;
                        // Nij = 1.0;
 		       // Calculate the exchange in concentration
 		       ni = rho[i] / imass;
 		       nj = rho[j] / jmass;
 		       deltacA = (kAa[i]*cA[i]*(1-thetaA[j])*(1-thetaA[j]) - (kAd[i]*thetaA[j]*thetaA[j])/(ni*imass))*
-		         (-2.0*Nij*wfd)/(nj+ni);
+		         (-2.0*(itype-jtype)*Nij*wfd)/(nj+ni);
                        // printf("checking kAa[i] %f \n", kAa[i]);
                        // printf("checking kAd[i] %f \n", kAd[i]);
                        // printf("checking nj %f nj %f \n", ni, nj);
@@ -255,10 +258,10 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
                        // printf("checking cA %f \n", cA[i]);
                        // printf("calculated Nij %f \n", Nij);
                        // printf("sq %f \n", Nijsq);
-                       // printf("This is deltacA %f \n", deltacA);
+                       // printf("solid - i %d itype %d j %d jtype %d deltacA %f \n", i, itype, j, jtype, deltacA);
                        // printf("internal %d dcA[i] %f \n", i, dcA[i]);
-		       dcA[i] = dcA[i] - deltacA;
-		       dyA[j] = dyA[j] - deltacA;
+		       dcA[i] = dcA[i] + deltacA;
+		       dyA[j] = dyA[j] + deltacA;
 		     } // jtype solid
 		   } // check within support kernel
 		 } // check if j particle is inside
