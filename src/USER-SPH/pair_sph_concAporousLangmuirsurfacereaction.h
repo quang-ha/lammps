@@ -1,6 +1,6 @@
 #ifdef PAIR_CLASS
 
-PairStyle(sph/concAporousLangmuirsurfacereaction, PairSPHConcALangmuirSurfaceReaction)
+PairStyle(sph/concAporousLangmuirsurfacereaction, PairSPHConcAPorousLangmuirSurfaceReaction)
 
 #else
 
