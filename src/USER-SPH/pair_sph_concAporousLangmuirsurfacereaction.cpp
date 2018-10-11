@@ -268,51 +268,56 @@ void PairSPHConcAPorousLangmuirSurfaceReaction::compute(int eflag, int vflag) {
 	} // jj loop
       } //itype fluid
       else if (itype==2) { // if i particle is solid
+        // variable to check if there are fluid particles in the support
+        bool isfluidin = false;
 	for (jj = 0; jj < jnum; jj++) {
 	  j = jlist[jj];
 	  j &= NEIGHMASK;
 	  jtype = type[j];
+          // check if jtype inside simulation domain
+	  if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+                   x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+                   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
+            // check for fluid particles
+            if (jtype==1) {
+              isfluidin = true;
+            }
+            // Calculate the distance vector
+            delx = x[j][0] - xtmp;
+            dely = x[j][1] - ytmp;
+            delz = x[j][2] - ztmp;
+            rsq = delx * delx + dely * dely + delz * delz;
 
-          // Darcy type between solid particles only and check if jtype inside simulation domain
-	  if ((jtype ==2) && (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-                                   x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-                                   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))) {
-              // Calculate the distance vector
-              delx = x[j][0] - xtmp;
-              dely = x[j][1] - ytmp;
-              delz = x[j][2] - ztmp;
-              rsq = delx * delx + dely * dely + delz * delz;
-
-              // Check if j is within the support kernel
-              if (rsq < cutsq[itype][jtype]) {
-                h = cut[itype][jtype];
-                ih = 1.0/h;
-
-                // kernel function
-                if (domain->dimension == 3) {
-                  wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
-                  wfd = wfd*ih*ih*ih*ih;
-                  wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
-                } else {
-                  wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
-                  wfd = wfd*ih*ih*ih;
-                  wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
-                }
-
-		jmass = rmass[j];
-		// Calculating the particle exchange in the soloid
-		ni = rho[i] / imass;
-		nj = rho[j] / jmass;
-                // diffusion term
-		deltacA = (1.0/(imass*sqrt(rsq)))*
-		  ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
-		dcA[i] = dcA[i] + deltacA;
-              } // j within the support kernel
-            } // j inside the simulation domain and jtype is 2
+            // Check if j is within the support kernel
+            if (rsq < cutsq[itype][jtype]) {
+              h = cut[itype][jtype];
+              ih = 1.0/h;
+              // kernel function
+              if (domain->dimension == 3) {
+                wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
+                wfd = wfd*ih*ih*ih*ih;
+                wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
+              } else {
+                wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
+                wfd = wfd*ih*ih*ih;
+                wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
+              }
+              jmass = rmass[j];
+              // Calculating the particle exchange in the soloid
+              ni = rho[i] / imass;
+              nj = rho[j] / jmass;
+              // diffusion term
+              deltacA = (1.0/(imass*sqrt(rsq)))*
+                ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+              dcA[i] = dcA[i] + deltacA;
+            } // j within the support kernel
+          } // check jparticles inside simulation domain
         } // jj loop
-        // Add the reaction term for Darcy model
-        dcA[i] = dcA[i] - (As[i]/Vp[i])*(kAa[i]*cA[i]*(1-thetaA[i])*(1-thetaA[i]) - (kAd[i]*thetaA[i]*thetaA[i])/(ni*imass));
-        dyA[i] = dyA[i] + kAa[i]*cA[i]*(1-thetaA[i])*(1-thetaA[i]) - (kAd[i]*thetaA[i]*thetaA[i])/(ni*imass);
+        // if there are no fluid, add the reaction term for Darcy model
+        if (not isfluidin) {
+          dcA[i] = dcA[i] - (As[i]/Vp[i])*(kAa[i]*cA[i]*(1-thetaA[i])*(1-thetaA[i]) - (kAd[i]*thetaA[i]*thetaA[i])/(ni*imass));
+          dyA[i] = dyA[i] + kAa[i]*cA[i]*(1-thetaA[i])*(1-thetaA[i]) - (kAd[i]*thetaA[i]*thetaA[i])/(ni*imass);
+        }
       } //itype solid
     } // check i atom is inside domain
   } // ii loop
