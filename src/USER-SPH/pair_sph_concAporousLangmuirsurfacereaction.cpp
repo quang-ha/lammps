@@ -100,6 +100,22 @@ PairSPHConcAPorousLangmuirSurfaceReaction::PairSPHConcAPorousLangmuirSurfaceReac
         "Can't find property sA for pair_style sph/concAporousLangmuirsurfacereaction");
   sA = atom->dvector[isA];
 
+  // Find the surface area of solid's pore
+  int fAs;
+  int iAs = atom->find_custom("As", fAs);
+  if (iAs < 0)
+    error->all(FLERR,
+        "Can't find property As for pair_style sph/concAporousLangmuirsurfacereaction");
+  As = atom->dvector[iAs];
+
+  // Find the pore volume of solid's pore
+  int fVp;
+  int iVp = atom->find_custom("Vp", fVp);
+  if (iVp < 0)
+    error->all(FLERR,
+        "Can't find property Vp for pair_style sph/concAporousLangmuirsurfacereaction");
+  Vp = atom->dvector[iVp];
+
   // set comm size needed by this pair
   comm_forward = 5;
   comm_reverse = 3;
@@ -257,10 +273,46 @@ void PairSPHConcAPorousLangmuirSurfaceReaction::compute(int eflag, int vflag) {
 	  j &= NEIGHMASK;
 	  jtype = type[j];
 
-	  if (jtype ==2) { // Darcy interaction between solid particles only
+          // Darcy type between solid particles only and check if jtype inside simulation domain
+	  if ((jtype ==2) && (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+                                   x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+                                   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))) {
+              // Calculate the distance vector
+              delx = x[j][0] - xtmp;
+              dely = x[j][1] - ytmp;
+              delz = x[j][2] - ztmp;
+              rsq = delx * delx + dely * dely + delz * delz;
 
-	  }
-	} // jj loop
+              // Check if j is within the support kernel
+              if (rsq < cutsq[itype][jtype]) {
+                h = cut[itype][jtype];
+                ih = 1.0/h;
+
+                // kernel function
+                if (domain->dimension == 3) {
+                  wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
+                  wfd = wfd*ih*ih*ih*ih;
+                  wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
+                } else {
+                  wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
+                  wfd = wfd*ih*ih*ih;
+                  wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
+                }
+
+		jmass = rmass[j];
+		// Calculating the particle exchange in the soloid
+		ni = rho[i] / imass;
+		nj = rho[j] / jmass;
+                // diffusion term
+		deltacA = (1.0/(imass*sqrt(rsq)))*
+		  ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+		dcA[i] = dcA[i] + deltacA;
+              } // j within the support kernel
+            } // j inside the simulation domain and jtype is 2
+        } // jj loop
+        // Add the reaction term for Darcy model
+        dcA[i] = dcA[i] - (As[i]/Vp[i])*(kAa[i]*cA[i]*(1-thetaA[i])*(1-thetaA[i]) - (kAd[i]*thetaA[i]*thetaA[i])/(ni*imass));
+        dyA[i] = dyA[i] + kAa[i]*cA[i]*(1-thetaA[i])*(1-thetaA[i]) - (kAd[i]*thetaA[i]*thetaA[i])/(ni*imass);
       } //itype solid
     } // check i atom is inside domain
   } // ii loop
