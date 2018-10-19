@@ -27,6 +27,7 @@ namespace LAMMPS_NS {
 class FixMesoPrecipitationA : public Fix {
  public:
   FixMesoPrecipitationA(class LAMMPS *, int, char **);
+  virtual ~FixMesoPrecipitationA();
   int setmask();
   virtual void init();
   virtual void init_list(int, class NeighList *);
@@ -48,7 +49,11 @@ class FixMesoPrecipitationA : public Fix {
   double dtv,dtf;
   double *step_respa;
   double *cA, *cAeq, *dcA, *mA, *dmA, *RA, *mAthres, *rmass;
+  double *ischangecA;
   int mass_require;
+
+  void allocate();
+  void destroy();
 
   class Pair *pair;
 };

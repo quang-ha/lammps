@@ -105,9 +105,18 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
         "Can't find property mAthres for fix meso/precipitationA");
   mAthres = atom->dvector[imAthres];
 
+  // Allocate memory for the checking on the phase change trigger
+  allocate();
+
   // set comm size by this fix
   comm_forward = 5;
   comm_reverse = 5;
+}
+
+/* ---------------------------------------------------------------------- */
+
+FixMesoPrecipitationA::~FixMesoPrecipitationA() {
+  destroy();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -284,6 +293,19 @@ void FixMesoPrecipitationA::reset_dt() {
 
 /* ---------------------------------------------------------------------- */
 
+void FixMesoPrecipitationA::allocate() {
+  int nall = atom->nlocal + atom->nghost;
+  memory->create(ischangecA, nall, "fix:ischangecA");
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixMesoPrecipitationA::destroy() {
+  memory->destroy(ischangecA);
+}
+
+/* ---------------------------------------------------------------------- */
+
 int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
 					     int pbc_flag, int *pbc)
 {
@@ -318,7 +340,6 @@ void FixMesoPrecipitationA::unpack_forward_comm(int n, int first, double *buf)
       dmA[i] = buf[m++];
       cA[i] = buf[m++];
       dcA[i] = buf[m++];
-      type[i] = buf[m++];
     }
 }
 
@@ -333,11 +354,8 @@ int FixMesoPrecipitationA::pack_reverse_comm(int n, int first, double *buf)
   last = first + n;
   for (i = first; i < last; i++)
     {
-      buf[m++] = mA[i];
       buf[m++] = dmA[i];
-      buf[m++] = cA[i];
       buf[m++] = dcA[i];
-      buf[m++] = type[i];
     }
   return m;
 }
@@ -353,10 +371,7 @@ void FixMesoPrecipitationA::unpack_reverse_comm(int n, int *list, double *buf)
   for (i = 0; i < n; i++)
     {
       j = list[i];
-      mA[j] = buf[m++];
       dmA[j] = buf[m++];
-      cA[j] = buf[m++];
       dcA[j] = buf[m++];
-      type[j] = buf[m++];
     }
 }
