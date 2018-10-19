@@ -52,9 +52,6 @@ class FixMesoPrecipitationA : public Fix {
   double *ischangecA;
   int mass_require;
 
-  void allocate();
-  void destroy();
-
   class Pair *pair;
 };
 
