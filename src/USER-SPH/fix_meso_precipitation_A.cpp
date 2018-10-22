@@ -106,7 +106,7 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
   mAthres = atom->dvector[imAthres];
 
   // set comm size by this fix
-  comm_forward = 5;
+  comm_forward = 3;
   comm_reverse = 1;
 }
 
@@ -119,8 +119,6 @@ FixMesoPrecipitationA::~FixMesoPrecipitationA() {
 
 int FixMesoPrecipitationA::setmask() {
   int mask = 0;
-  mask |= INITIAL_INTEGRATE;
-  mask |= FINAL_INTEGRATE;
   mask |= END_OF_STEP;
   return mask;
 }
@@ -128,9 +126,6 @@ int FixMesoPrecipitationA::setmask() {
 /* ---------------------------------------------------------------------- */
 
 void FixMesoPrecipitationA::init() {
-  dtv = update->dt;
-  dtf = 0.5*update->dt*force->ftm2v;
-
   // need a full neighbor list, built whenever re-neighboring occurs
   int irequest = neighbor->request((void *) this);
   neighbor->requests[irequest]->pair = 0;
@@ -144,49 +139,6 @@ void FixMesoPrecipitationA::init() {
 void FixMesoPrecipitationA::init_list(int, NeighList *ptr)
 {
   list = ptr;
-}
-
-/* ----------------------------------------------------------------------
- allow for both per-type and per-atom mass
- ------------------------------------------------------------------------- */
-
-void FixMesoPrecipitationA::initial_integrate(int vflag) {  
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  int *type = atom->type;
-  
-  int i;
-
-  if (igroup == atom->firstgroup)
-    nlocal = atom->nfirst;
-
-  for (i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit) {
-      cA[i] += dtf * dcA[i]; // half-step update of particle precipitation
-      if (type[i] == 2) // Only update mass for solid particles
-	mA[i] += dtf*dmA[i];
-    }
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixMesoPrecipitationA::final_integrate() {
-  
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  int *type = atom->type;
-  
-  if (igroup == atom->firstgroup)
-    nlocal = atom->nfirst;
-
-  for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit) {
-      cA[i] += dtf*dcA[i];
-      if (type[i] == 2) // Only update mass for solid particles
-	mA[i] += dtf*dmA[i];
-    }
-  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -284,10 +236,8 @@ void FixMesoPrecipitationA::end_of_step()
       if (type[i] == 1) {
         // Changing liquid into solid
         mA[i] = 0.0;
-        dmA[i] = 0.0; // change in mass starts at 0.0
         type[i] = 2; // convert the liquid to the solid
         cA[i] = 0.0; // concentration is 0.0
-        dcA[i] = 0.0; // change in concentration is also 0.0
         //   v[jshortest][0] = 0.0; // set velocity to 0.0
         //   v[jshortest][1] = 0.0;
         //   v[jshortest][2] = 0.0;
@@ -296,10 +246,8 @@ void FixMesoPrecipitationA::end_of_step()
         // changing solid into liquid
         if (mA[i] <= 0.0) {
           mA[i] = 0.0; // mass becomes 0.0 for dissolution
-          dmA[i] = 0.0; // change in mass also becomes 0.0
           type[i] = 1; // convert solid to liquid
           cA[i] = cAeq[i]; // concentration reach back to equilibrium
-          dcA[i] = 0.0; // change of concentration to 0.0
         }
         else if (mA[i] >= mAthres[i]) {
           // Only causing the particle to reduce the mass
@@ -318,13 +266,6 @@ void FixMesoPrecipitationA::end_of_step()
 
 /* ---------------------------------------------------------------------- */
 
-void FixMesoPrecipitationA::reset_dt() {
-  dtv = update->dt;
-  dtf = 0.5 * update->dt * force->ftm2v;
-}
-
-/* ---------------------------------------------------------------------- */
-
 int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
 					     int pbc_flag, int *pbc)
 {
@@ -335,9 +276,7 @@ int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
   for (i = 0; i < n; i++) {
     j = list[i];
     buf[m++] = mA[j];
-    buf[m++] = dmA[j];
     buf[m++] = cA[j];
-    buf[m++] = dcA[j];
     buf[m++] = atom->type[j];
   }
 
@@ -348,16 +287,13 @@ int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
 
 void FixMesoPrecipitationA::unpack_forward_comm(int n, int first, double *buf)
 {
-  // printf("Receiving forward! \n");
   int i, m, last;
   
   m = 0;
   last = first + n;
   for (i = first; i < last; i++) {
     mA[i] = buf[m++];
-    dmA[i] = buf[m++];
     cA[i] = buf[m++];
-    dcA[i] = buf[m++];
     atom->type[i] = buf[m++];
   }
 }
