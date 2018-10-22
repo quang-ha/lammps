@@ -42,7 +42,7 @@ FixMesoConcentrationA::FixMesoConcentrationA(LAMMPS *lmp, int narg, char **arg) 
         "fix meso/concentration command requires atom_style with both energy and density, e.g. meso");
 
   if (narg != 3)
-    error->all(FLERR,"Illegal number of arguments for fix meso/concentration command");
+    error->all(FLERR,"Illegal number of arguments for fix meso/concentrationA command");
 
   time_integrate = 0;
 
@@ -51,68 +51,97 @@ FixMesoConcentrationA::FixMesoConcentrationA(LAMMPS *lmp, int narg, char **arg) 
   int icA = atom->find_custom("cA", fcA);
   if (icA < 0)
     error->all(FLERR,
-        "Can't find property cA for fix meso/concAdiffusion"); 
+        "Can't find property cA for fix meso/concentrationA");
   cA = atom->dvector[icA];
 
-  // find the local concentration property
+  // find the equlibrium concentration property
+  int fcAeq;
+  int icAeq = atom->find_custom("cAeq", fcAeq);
+  if (icAeq < 0)
+    error->all(FLERR,
+        "Can't find property cAeq for fix meso/concentrationA");
+  cAeq = atom->dvector[icAeq];
+
+  // find the concentration property
   int fdcA;
   int idcA = atom->find_custom("dcA", fdcA);
-  if (idcA < 0)
+  if (icA < 0)
     error->all(FLERR,
-        "Can't find property dcA for fix meso/concAdiffusion");  
+        "Can't find property dcA for fix meso/concentrationA");
   dcA = atom->dvector[idcA];
 
-  // // set comm size needed by this fix
-  // comm_forward = 1;
+  // find the solid-liquid interaction
+  int fRA;
+  int iRA = atom->find_custom("RA", fRA);
+  if (iRA < 0)
+    error->all(FLERR,
+        "Can't find property RA for fix meso/concentrationA");
+  RA = atom->dvector[iRA];
+
+  // find the solid-liquid interaction
+  int fdmA;
+  int idmA = atom->find_custom("dmA", fdmA);
+  if (idmA < 0)
+    error->all(FLERR,
+        "Can't find property dmA for fix meso/concentrationA");
+  dmA = atom->dvector[idmA];
+
+  // find the mass of A property
+  int fmA;
+  int imA = atom->find_custom("mA", fmA);
+  if (imA < 0)
+    error->all(FLERR,
+        "Can't find property mA for fix meso/concentrationA");
+  mA = atom->dvector[imA];
+
+  // find the mass threshold property
+  int fmAthres;
+  int imAthres = atom->find_custom("mAthres", fmAthres);
+  if (imAthres < 0)
+    error->all(FLERR,
+        "Can't find property mAthres for fix meso/concentrationA");
+  mAthres = atom->dvector[imAthres];
+
+  // Set the communication size
+  comm_forward = 2;
+}
+
+/* ---------------------------------------------------------------------- */
+
+FixMesoConcentrationA::~FixMesoConcentrationA() {
 }
 
 /* ---------------------------------------------------------------------- */
 
 int FixMesoConcentrationA::setmask() {
   int mask = 0;
-  mask |= INITIAL_INTEGRATE;
   mask |= FINAL_INTEGRATE;
+  mask |= END_OF_STEP;
   return mask;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixMesoConcentrationA::init() {
-  dtv = update->dt;
-  dtf = 0.5*update->dt*force->ftm2v;
-}
-
-/* ----------------------------------------------------------------------
- allow for both per-type and per-atom mass
- ------------------------------------------------------------------------- */
-
-void FixMesoConcentrationA::initial_integrate(int vflag) {  
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  int i;
-
-  if (igroup == atom->firstgroup)
-    nlocal = atom->nfirst;
-
-  for (i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit) {
-      cA[i] += dtf * dcA[i]; // half-step update of particle concentration
-    }
-  }
+  dtcA = update->dt;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixMesoConcentrationA::final_integrate() {
-  
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+  int *type = atom->type;
+
   if (igroup == atom->firstgroup)
     nlocal = atom->nfirst;
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
-      cA[i] += dtf * dcA[i];
+      cA[i] += dtcA*dcA[i];
+      // Only update mass for solid particles
+      if (type[i] == 2)
+	mA[i] += dtcA*dmA[i];
     }
   }
 }
@@ -120,8 +149,5 @@ void FixMesoConcentrationA::final_integrate() {
 /* ---------------------------------------------------------------------- */
 
 void FixMesoConcentrationA::reset_dt() {
-  dtv = update->dt;
-  dtf = 0.5 * update->dt * force->ftm2v;
+  dtcA = update->dt;
 }
-
-/* ---------------------------------------------------------------------- */
