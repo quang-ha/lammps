@@ -44,10 +44,17 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "fix meso/precipitation command requires atom_style with both energy and density, e.g. meso");
 
-  if (narg != 3)
+  if (narg != 4)
     error->all(FLERR,"Illegal number of arguments for fix meso/precipitation command");
 
   time_integrate = 0;
+
+  // required args
+  int m = 3;
+  neighbour_cutoff = atof(arg[m++]);
+  if (neighbour_cutoff <= 0.0) {
+    error->all(FLERR,"Illegal value for neighbour cutoff distance");
+  }
   
   // find the concentration property
   int fcA;
@@ -132,6 +139,8 @@ void FixMesoPrecipitationA::init() {
   neighbor->requests[irequest]->fix = 1;
   neighbor->requests[irequest]->half = 0;
   neighbor->requests[irequest]->full = 1;
+  neighbor->requests[irequest]->cut = 1;
+  neighbor->requests[irequest]->cutoff = neighbour_cutoff;
 }
 
 /* ---------------------------------------------------------------------- */
