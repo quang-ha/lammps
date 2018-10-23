@@ -96,7 +96,8 @@ PairSPHConcASurfaceReactionMultiPhase::~PairSPHConcASurfaceReactionMultiPhase() 
     memory->destroy(setflag);
     memory->destroy(cutsq);
     memory->destroy(cut);
-    memory->destroy(phasecut);
+    memory->destroy(phase_support);
+    memory->destroy(kernel_support);
   }
 }
 
@@ -117,7 +118,7 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
 
   int *ilist, *jlist, *numneigh, **firstneigh;
   double imass, jmass, h, d, ih, ihsq;
-  double rsq, wf, wfd, D, K, deltacA;
+  double r, wf, wfd, D, K, deltacA;
 
   double ni, nj;
   
@@ -132,6 +133,7 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
   double *rho = atom->rho;
   int *type = atom->type;
   int nlocal = atom->nlocal;
+  int nall = nlocal + atom->nghost;
 
   inum = list->inum;
   ilist = list->ilist;
@@ -150,83 +152,82 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
   
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
-    itype = type[i];
+    // check that we are only doing local and ghost atoms only
+    if (i < nall) {
+      itype = type[i];
 
-    xtmp = x[i][0];
-    ytmp = x[i][1];
-    ztmp = x[i][2];	
+      xtmp = x[i][0];
+      ytmp = x[i][1];
+      ztmp = x[i][2];
 
-    // check if the i particles is within the domain
-    if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
-	     ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
-	     ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2]))
-       { 
-	 if (itype == 1) // only do diffusion for ifluid particle
-	   {
-	     jlist = firstneigh[i];
-	     jnum = numneigh[i];
-	     
-	     imass = rmass[i];
-	     
-	     for (jj = 0; jj < jnum; jj++) {
-	       j = jlist[jj];
-	       j &= NEIGHMASK;
-	       jtype = type[j];
+      // check if the i particles is within the domain
+      if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
+	       ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
+	       ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2])) {
+	if (itype == 1) { // only do diffusion for ifluid particle
+	  jlist = firstneigh[i];
+	  jnum = numneigh[i];
 
-	       // check if the j particles is within the domain
-	       if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-			x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-			x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
-		 {
-		   delx = xtmp - x[j][0];
-		   dely = ytmp - x[j][1];
-		   delz = ztmp - x[j][2];
-		   rsq = delx * delx + dely * dely + delz * delz;
-		   
-		   if (jtype == 1) // this is only for fluid-fluid interaction
-		     {	      
-		       if (rsq < cutsq[itype][jtype]) {
-			 h = cut[itype][jtype];
-			 ih = 1.0/h;
-			 
-			 // kernel function
-			 if (domain->dimension == 3) {
-			   wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
-			   wfd = wfd*ih*ih*ih*ih;
-			   wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
-			 } else {
-			   wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
-			   wfd = wfd*ih*ih*ih;
-			   wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
-			 }
-			 
-			 jmass = rmass[j];
-			 
-			 // Calculating the particle exchange
-			 // Reference: Tartakovsky(2007) - Simulations of reactive transport
-			 // and precipitation with sph
-			 // The constants give better results...
-			 ni = rho[i] / imass;
-			 nj = rho[j] / jmass;
-			 deltacA = (1.0/(imass*sqrt(rsq)))*
-			   ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
-			 dcA[i] = dcA[i] + deltacA;
-		       }
-		     } // jtype fluid
-		   else // if jtype is solid
-		     {
-		       d = phasecut[itype][jtype];
-		       if (sqrt(rsq) <= d)
-			 {
-			   deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
-			   dcA[i] = dcA[i] - deltacA;
-			   dmA[j] = dmA[j] + jmass*RA[j]*(cA[i] - cAeq[i]);
-			 }
-		     } // jtype solid
-		 } // check if j particle is inside
-	     } // jj loop
-	   } //itype fluid
-       } // check i atom is inside domain
+	  imass = rmass[i];
+
+	  for (jj = 0; jj < jnum; jj++) {
+	    j = jlist[jj];
+	    j &= NEIGHMASK;
+	    // check that we are only doing local and ghost atoms only
+	    if (j < nall) {
+	      jtype = type[j];
+
+	      // check if the j particles is within the domain
+	      if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+		       x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+		       x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
+		delx = xtmp - x[j][0];
+		dely = ytmp - x[j][1];
+		delz = ztmp - x[j][2];
+		r = sqrt(delx * delx + dely * dely + delz * delz);
+
+		if (jtype == 1) { // this is only for fluid-fluid interaction
+		  if (r < kernel_support[itype][jtype]) {
+		    h = kernel_support[itype][jtype];
+		    ih = 1.0/h;
+
+		    // kernel function
+		    if (domain->dimension == 3) {
+		      wfd = sph_dw_quintic3d(r*ih);
+		      wfd = wfd*ih*ih*ih*ih;
+		      wf = sph_kernel_quintic3d(r*ih)*ih*ih*ih;
+		    } else {
+		      wfd = sph_dw_quintic2d(r*ih);
+		      wfd = wfd*ih*ih*ih;
+		      wf = sph_kernel_quintic2d(r*ih)*ih*ih;
+		    }
+
+		    jmass = rmass[j];
+		    // Calculating the particle exchange
+		    // Reference: Tartakovsky(2007) - Simulations of reactive transport
+		    // and precipitation with sph
+		    // The constants give better results...
+		    ni = rho[i] / imass;
+		    nj = rho[j] / jmass;
+		    deltacA = (1.0/(imass*r))*
+		      ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+		    dcA[i] = dcA[i] + deltacA;
+		  }
+		} // jtype fluid
+		else { // if jtype is solid
+		  d = phase_support[itype][jtype];
+		  if (r <= d) {
+		    deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
+		    dcA[i] = dcA[i] - deltacA;
+		    dmA[j] = dmA[j] + jmass*RA[j]*(cA[i] - cAeq[i]);
+		  }
+		} // jtype solid
+	      } // check if j particle is inside
+	    } // check if j atom is either local or ghost
+	  } // jj loop
+	} //itype fluid
+      } // check i atom is inside domain
+    } // check if i atom is either local or ghost
   } // ii loop
   
   // Communicate the ghost dcA and dmA to the locally owned atoms
@@ -248,7 +249,8 @@ void PairSPHConcASurfaceReactionMultiPhase::allocate() {
 
   memory->create(cutsq, n + 1, n + 1, "pair:cutsq");
   memory->create(cut, n + 1, n + 1, "pair:cut");
-  memory->create(phasecut, n + 1, n + 1, "pair:phasecut");
+  memory->create(kernel_support, n + 1, n + 1, "pair:kernel_support");
+  memory->create(phase_support, n + 1, n + 1, "pair:phase_support");
 }
 
 /* ----------------------------------------------------------------------
@@ -275,14 +277,15 @@ void PairSPHConcASurfaceReactionMultiPhase::coeff(int narg, char **arg) {
   force->bounds(FLERR,arg[0], atom->ntypes, ilo, ihi);
   force->bounds(FLERR,arg[1], atom->ntypes, jlo, jhi);
   
-  double cut_one = force->numeric(FLERR,arg[2]);
-  double phasecut_one = force->numeric(FLERR,arg[3]);
+  double kernel_one = force->numeric(FLERR,arg[2]);
+  double phase_one = force->numeric(FLERR,arg[3]);
   
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
     for (int j = MAX(jlo,i); j <= jhi; j++) {
-      cut[i][j] = 2.0*cut_one;
-      phasecut[i][j] = phasecut_one;
+      cut[i][j] = 3.0*kernel_one;
+      kernel_support[i][j] = kernel_one;
+      phase_support[i][j] = phase_one;
       setflag[i][j] = 1;
       count++;
     }
@@ -303,7 +306,8 @@ double PairSPHConcASurfaceReactionMultiPhase::init_one(int i, int j) {
   }
 
   cut[j][i] = cut[i][j];
-  phasecut[j][i] = phasecut[i][j];
+  kernel_support[j][i] = kernel_support[i][j];
+  phase_support[j][i] = phase_support[i][j];
   
   return cut[i][j];
 }
