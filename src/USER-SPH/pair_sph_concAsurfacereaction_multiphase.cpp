@@ -85,7 +85,7 @@ PairSPHConcASurfaceReactionMultiPhase::PairSPHConcASurfaceReactionMultiPhase(LAM
   mAthres = atom->dvector[imAthres];
 
   // set comm size needed by this pair
-  comm_forward = 2;
+  comm_forward = 3;
   comm_reverse = 2;
 }
 
@@ -327,13 +327,13 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_forward_comm(int n, int *list, d
 					     int pbc_flag, int *pbc)
 {
   int i, j, m;
-  int *type = atom->type;
   
   m = 0;
   for (i = 0; i < n; i++) {
     j = list[i];
     buf[m++] = cA[j];
     buf[m++] = mA[j];
+    buf[m++] = atom->type[j];
   }
   return m;
 }
@@ -343,13 +343,13 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_forward_comm(int n, int *list, d
 void PairSPHConcASurfaceReactionMultiPhase::unpack_forward_comm(int n, int first, double *buf)
 {
   int i, m, last;
-  int *type = atom->type;
   
   m = 0;
   last = first + n;
   for (i = first; i < last; i++) {
     cA[i] = buf[m++];
     mA[i] = buf[m++];
+    atom->type[i] = buf[m++];
   }
 }
 

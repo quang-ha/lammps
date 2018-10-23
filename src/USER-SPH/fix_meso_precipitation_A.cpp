@@ -44,17 +44,10 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "fix meso/precipitation command requires atom_style with both energy and density, e.g. meso");
 
-  if (narg != 4)
+  if (narg != 3)
     error->all(FLERR,"Illegal number of arguments for fix meso/precipitation command");
 
   time_integrate = 0;
-
-  // required args
-  int m = 3;
-  neighbour_cutoff = atof(arg[m++]);
-  if (neighbour_cutoff <= 0.0) {
-    error->all(FLERR,"Illegal value for neighbour cutoff distance");
-  }
   
   // find the concentration property
   int fcA;
@@ -113,7 +106,6 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
   mAthres = atom->dvector[imAthres];
 
   // set comm size by this fix
-  comm_forward = 3;
   comm_reverse = 1;
 }
 
@@ -139,8 +131,6 @@ void FixMesoPrecipitationA::init() {
   neighbor->requests[irequest]->fix = 1;
   neighbor->requests[irequest]->half = 0;
   neighbor->requests[irequest]->full = 1;
-  neighbor->requests[irequest]->cut = 1;
-  neighbor->requests[irequest]->cutoff = neighbour_cutoff;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -275,40 +265,6 @@ void FixMesoPrecipitationA::end_of_step()
 
 /* ---------------------------------------------------------------------- */
 
-int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
-					     int pbc_flag, int *pbc)
-{
-  // printf("Sending forward! n = %d \n", n);
-  int i, j, m;
-
-  m = 0;
-  for (i = 0; i < n; i++) {
-    j = list[i];
-    buf[m++] = mA[j];
-    buf[m++] = cA[j];
-    buf[m++] = atom->type[j];
-  }
-
-  return m;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixMesoPrecipitationA::unpack_forward_comm(int n, int first, double *buf)
-{
-  int i, m, last;
-  
-  m = 0;
-  last = first + n;
-  for (i = first; i < last; i++) {
-    mA[i] = buf[m++];
-    cA[i] = buf[m++];
-    atom->type[i] = buf[m++];
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
 int FixMesoPrecipitationA::pack_reverse_comm(int n, int first, double *buf)
 {
   int i,m,last;
@@ -316,10 +272,9 @@ int FixMesoPrecipitationA::pack_reverse_comm(int n, int first, double *buf)
   
   m = 0;
   last = first + n;
-  for (i = first; i < last; i++)
-    {
-      buf[m++] = ischangecA[i];
-    }
+  for (i = first; i < last; i++) {
+    buf[m++] = ischangecA[i];
+  }
  return m;
 }
 
@@ -331,9 +286,8 @@ void FixMesoPrecipitationA::unpack_reverse_comm(int n, int *list, double *buf)
   int *type = atom->type;
   
   m = 0;
-  for (i = 0; i < n; i++)
-    {
-      j = list[i];
-      ischangecA[j] += buf[m++];
-    }
+  for (i = 0; i < n; i++) {
+    j = list[i];
+    ischangecA[j] += buf[m++];
+  }
 }

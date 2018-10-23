@@ -33,9 +33,6 @@ class FixMesoPrecipitationA : public Fix {
   virtual void init_list(int, class NeighList *);
   virtual void end_of_step();
 
-  int pack_forward_comm(int, int *, double *, int, int *);
-  void unpack_forward_comm(int, int, double *);
-
   void unpack_reverse_comm(int, int *, double *);
   int pack_reverse_comm(int, int, double *);
   
@@ -43,7 +40,6 @@ class FixMesoPrecipitationA : public Fix {
   class NeighList *list;
   
  protected:
-  double neighbour_cutoff;
   double *step_respa;
   double *cA, *cAeq, *dcA, *mA, *dmA, *RA, *mAthres, *rmass;
   double *ischangecA;
