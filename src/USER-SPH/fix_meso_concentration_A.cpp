@@ -116,7 +116,6 @@ FixMesoConcentrationA::~FixMesoConcentrationA() {
 int FixMesoConcentrationA::setmask() {
   int mask = 0;
   mask |= FINAL_INTEGRATE;
-  mask |= END_OF_STEP;
   return mask;
 }
 
@@ -136,7 +135,9 @@ void FixMesoConcentrationA::final_integrate() {
   if (igroup == atom->firstgroup)
     nlocal = atom->nfirst;
 
-  for (int i = 0; i < nlocal; i++) {
+  int nall = nlocal + atom->nghost;
+
+  for (int i = 0; i < nall; i++) {
     if (mask[i] & groupbit) {
       cA[i] += dtcA*dcA[i];
       // Only update mass for solid particles
