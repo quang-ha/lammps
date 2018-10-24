@@ -117,7 +117,7 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
   double delx, dely, delz;
 
   int *ilist, *jlist, *numneigh, **firstneigh;
-  double imass, jmass, h, d, ih, ihsq;
+  double imass, jmass, h, ih, ihsq;
   double r, wf, wfd, D, K, deltacA;
 
   double ni, nj;
@@ -208,8 +208,7 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
                   dcA[i] = dcA[i] + deltacA;
                 } // fluid-fluid interaction
                 else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
-                  d = phase_support[itype][jtype];
-                  if (r <= d) {
+                  if (r <= phase_support[itype][jtype]) {
                     deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
                     dcA[i] = dcA[i] - deltacA;
                   }
