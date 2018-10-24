@@ -279,7 +279,7 @@ void PairSPHConcASurfaceReactionMultiPhase::coeff(int narg, char **arg) {
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
     for (int j = MAX(jlo,i); j <= jhi; j++) {
-      cut[i][j] = 3.0*kernel_one;
+      cut[i][j] = 4.0*kernel_one;
       kernel_support[i][j] = kernel_one;
       phase_support[i][j] = phase_one;
       setflag[i][j] = 1;
