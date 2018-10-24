@@ -148,7 +148,7 @@ void FixMesoPrecipitationA::end_of_step()
   int *ilist, *jlist, *numneigh, **firstneigh;
 
   double delx, dely, delz;
-  double shortest, xtmp, ytmp, ztmp, rsq, r;
+  double shortest, rsq, r;
   
   double **x = atom->x;
   double **v = atom->v;
@@ -180,36 +180,29 @@ void FixMesoPrecipitationA::end_of_step()
     // Only deal with solid particles
     if (itype == 2) {
       if (mA[i] >= mAthres[i]) { // precipitation
-        // Keep the position of the solid particle
-        xtmp = x[i][0];
-        ytmp = x[i][1];
-        ztmp = x[i][2];
-
         // Check neighbouring atoms
         jnum = numneigh[i];
         jlist = firstneigh[i];
 
         // Then need to find the closest fluid particles
-        shortest = 1000.0;
+        shortest = 100000.0;
         foundShortest = false;
 
         for (jj = 0; jj < jnum; jj++) {
           j = jlist[jj];
           j &= NEIGHMASK;
           jtype = type[j];
-	      
-          if (jtype == 1) { // if liquid particle then check for shortest distance
-            delx = xtmp - x[j][0];
-            dely = ytmp - x[j][1];
-            delz = ztmp - x[j][2];
-            r = sqrt(delx*delx + dely*dely + delz*delz);
 
-            if (r < shortest) {
-              foundShortest = true;
-              shortest = r;
-              jshortest = j;
-            }
-          } // ifliquid
+          delx = x[i][0] - x[j][0];
+          dely = x[i][1] - x[j][1];
+          delz = x[i][2] - x[j][2];
+          r = sqrt(delx*delx + dely*dely + delz*delz);
+
+          if ((r<shortest) && (jtype==1)) {
+            foundShortest = true;
+            shortest = r;
+            jshortest = j;
+          }
         } // for loop to find closest fluid
 
         // if there is a closest liquid particle
@@ -243,7 +236,7 @@ void FixMesoPrecipitationA::end_of_step()
       }
       else if (type[i] == 2) {
         // changing solid into liquid
-        if (mA[i] <= 0.0) {
+        if (mA[i] <= -mAthres[i]) {
           mA[i] = 0.0; // mass becomes 0.0 for dissolution
           type[i] = 1; // convert solid to liquid
           cA[i] = cAeq[i]; // concentration reach back to equilibrium

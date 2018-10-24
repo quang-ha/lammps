@@ -114,7 +114,7 @@ void PairSPHConcASurfaceReactionMultiPhase::init_style()
 
 void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
   int i, j, ii, jj, inum, jnum, itype, jtype;
-  double xtmp, ytmp, ztmp, delx, dely, delz;
+  double delx, dely, delz;
 
   int *ilist, *jlist, *numneigh, **firstneigh;
   double imass, jmass, h, d, ih, ihsq;
@@ -155,15 +155,10 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
     // check that we are only doing local and ghost atoms only
     if (i < nall) {
       itype = type[i];
-
-      xtmp = x[i][0];
-      ytmp = x[i][1];
-      ztmp = x[i][2];
-
       // check if the i particles is within the domain
-      if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
-	       ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
-	       ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2])) {
+      if (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
+	       x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
+	       x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2])) {
         jlist = firstneigh[i];
         jnum = numneigh[i];
 
@@ -180,9 +175,9 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
             if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
                      x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
                      x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
-              delx = xtmp - x[j][0];
-              dely = ytmp - x[j][1];
-              delz = ztmp - x[j][2];
+              delx = x[i][0] - x[j][0];
+              dely = x[i][1] - x[j][1];
+              delz = x[i][2] - x[j][2];
               r = sqrt(delx * delx + dely * dely + delz * delz);
 
               if (r < kernel_support[itype][jtype]) {
