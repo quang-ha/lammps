@@ -214,7 +214,9 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
                   }
                 } // fluid-solid interaction
                 else if ((itype==2) && (jtype==1)) { // solid-fluid interaction
-                  dmA[i] = dmA[i] + imass*RA[i]*(cA[j] - cAeq[j]);
+                  if (r <= phase_support[itype][jtype]) {
+                    dmA[i] = dmA[i] + (imass+mA[i])*RA[i]*(cA[j] - cAeq[j]);
+                  }
                 } // solid-fluid interaction
               } // check if j particle is inside kernel
             } // check if j particle is inside domain
