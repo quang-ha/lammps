@@ -153,77 +153,75 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
     // check that we are only doing local and ghost atoms only
-    if (i < nall) {
-      itype = type[i];
-      // check if the i particles is within the domain
-      if (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
-	       x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
-	       x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2])) {
-        jlist = firstneigh[i];
-        jnum = numneigh[i];
+    itype = type[i];
+    // check if the i particles is within the domain
+    if (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
+             x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
+             x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2])) {
+      jlist = firstneigh[i];
+      jnum = numneigh[i];
 
-        imass = rmass[i];
+      imass = rmass[i];
 
-        for (jj = 0; jj < jnum; jj++) {
-          j = jlist[jj];
-          j &= NEIGHMASK;
-          // check that we are only doing local and ghost atoms only
-          if (j < nall) {
-            jtype = type[j];
+      for (jj = 0; jj < jnum; jj++) {
+        j = jlist[jj];
+        j &= NEIGHMASK;
+        // check that we are only doing local and ghost atoms only
+        if (j < nall) {
+          jtype = type[j];
 
-            // check if the j particles is within the domain
-            if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-                     x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-                     x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
-              delx = x[i][0] - x[j][0];
-              dely = x[i][1] - x[j][1];
-              delz = x[i][2] - x[j][2];
-              r = sqrt(delx * delx + dely * dely + delz * delz);
+          // check if the j particles is within the domain
+          if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+                   x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+                   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
+            delx = x[i][0] - x[j][0];
+            dely = x[i][1] - x[j][1];
+            delz = x[i][2] - x[j][2];
+            r = sqrt(delx * delx + dely * dely + delz * delz);
 
-              if (r < kernel_support[itype][jtype]) {
-                h = kernel_support[itype][jtype];
-                ih = 1.0/h;
+            if (r < kernel_support[itype][jtype]) {
+              h = kernel_support[itype][jtype];
+              ih = 1.0/h;
 
-                // kernel function
-                if (domain->dimension == 3) {
-                  wfd = sph_dw_quintic3d(r*ih);
-                  wfd = wfd*ih*ih*ih*ih;
-                  wf = sph_kernel_quintic3d(r*ih)*ih*ih*ih;
-                } else {
-                  wfd = sph_dw_quintic2d(r*ih);
-                  wfd = wfd*ih*ih*ih;
-                  wf = sph_kernel_quintic2d(r*ih)*ih*ih;
+              // kernel function
+              if (domain->dimension == 3) {
+                wfd = sph_dw_quintic3d(r*ih);
+                wfd = wfd*ih*ih*ih*ih;
+                wf = sph_kernel_quintic3d(r*ih)*ih*ih*ih;
+              } else {
+                wfd = sph_dw_quintic2d(r*ih);
+                wfd = wfd*ih*ih*ih;
+                wf = sph_kernel_quintic2d(r*ih)*ih*ih;
+              }
+
+              if ((itype==1) && (jtype==1)) { // fluid-fluid interaction
+                jmass = rmass[j];
+                // Calculating the particle exchange
+                // Reference: Tartakovsky(2007) - Simulations of reactive transport
+                // and precipitation with sph
+                // The constants give better results...
+                ni = rho[i] / imass;
+                nj = rho[j] / jmass;
+                deltacA = (1.0/(imass*r))*
+                  ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+                dcA[i] = dcA[i] + deltacA;
+              } // fluid-fluid interaction
+              else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
+                if (r <= phase_support[itype][jtype]) {
+                  deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
+                  dcA[i] = dcA[i] - deltacA;
                 }
-
-                if ((itype==1) && (jtype==1)) { // fluid-fluid interaction
-                  jmass = rmass[j];
-                  // Calculating the particle exchange
-                  // Reference: Tartakovsky(2007) - Simulations of reactive transport
-                  // and precipitation with sph
-                  // The constants give better results...
-                  ni = rho[i] / imass;
-                  nj = rho[j] / jmass;
-                  deltacA = (1.0/(imass*r))*
-                    ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
-                  dcA[i] = dcA[i] + deltacA;
-                } // fluid-fluid interaction
-                else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
-                  if (r <= phase_support[itype][jtype]) {
-                    deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
-                    dcA[i] = dcA[i] - deltacA;
-                  }
-                } // fluid-solid interaction
-                else if ((itype==2) && (jtype==1)) { // solid-fluid interaction
-                  if (r <= phase_support[itype][jtype]) {
-                    dmA[i] = dmA[i] + (imass+mA[i])*RA[i]*(cA[j] - cAeq[j]);
-                  }
-                } // solid-fluid interaction
-              } // check if j particle is inside kernel
-            } // check if j particle is inside domain
-          } // check if j atom is either local or ghost
-        } // jj loop
-      } // check i atom is inside domain
-    } // check if i atom is either local or ghost
+              } // fluid-solid interaction
+              else if ((itype==2) && (jtype==1)) { // solid-fluid interaction
+                if (r <= phase_support[itype][jtype]) {
+                  dmA[i] = dmA[i] + imass*RA[i]*(cA[j] - cAeq[j]);
+                }
+              } // solid-fluid interaction
+            } // check if j particle is inside kernel
+          } // check if j particle is inside domain
+        } // check if j atom is either local or ghost
+      } // jj loop
+    } // check i atom is inside domain
   } // ii loop
 
   // Communicate the ghost dcA and dmA to the locally owned atoms
