@@ -97,7 +97,6 @@ PairSPHConcASurfaceReactionMultiPhase::~PairSPHConcASurfaceReactionMultiPhase() 
     memory->destroy(cutsq);
     memory->destroy(cut);
     memory->destroy(phase_support);
-    memory->destroy(kernel_support);
   }
 }
 
@@ -167,59 +166,57 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
         j = jlist[jj];
         j &= NEIGHMASK;
         // check that we are only doing local and ghost atoms only
-        if (j < nall) {
-          jtype = type[j];
+        jtype = type[j];
 
-          // check if the j particles is within the domain
-          if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-                   x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-                   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
-            delx = x[i][0] - x[j][0];
-            dely = x[i][1] - x[j][1];
-            delz = x[i][2] - x[j][2];
-            r = sqrt(delx * delx + dely * dely + delz * delz);
+        // check if the j particles is within the domain
+        if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+                 x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+                 x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
+          delx = x[i][0] - x[j][0];
+          dely = x[i][1] - x[j][1];
+          delz = x[i][2] - x[j][2];
+          r = sqrt(delx * delx + dely * dely + delz * delz);
 
-            if (r < kernel_support[itype][jtype]) {
-              h = kernel_support[itype][jtype];
-              ih = 1.0/h;
+          if (r < cut[itype][jtype]) {
+            h = cut[itype][jtype];
+            ih = 1.0/h;
 
-              // kernel function
-              if (domain->dimension == 3) {
-                wfd = sph_dw_quintic3d(r*ih);
-                wfd = wfd*ih*ih*ih*ih;
-                wf = sph_kernel_quintic3d(r*ih)*ih*ih*ih;
-              } else {
-                wfd = sph_dw_quintic2d(r*ih);
-                wfd = wfd*ih*ih*ih;
-                wf = sph_kernel_quintic2d(r*ih)*ih*ih;
+            // kernel function
+            if (domain->dimension == 3) {
+              wfd = sph_dw_quintic3d(r*ih);
+              wfd = wfd*ih*ih*ih*ih;
+              wf = sph_kernel_quintic3d(r*ih)*ih*ih*ih;
+            } else {
+              wfd = sph_dw_quintic2d(r*ih);
+              wfd = wfd*ih*ih*ih;
+              wf = sph_kernel_quintic2d(r*ih)*ih*ih;
+            }
+
+            if ((itype==1) && (jtype==1)) { // fluid-fluid interaction
+              jmass = rmass[j];
+              // Calculating the particle exchange
+              // Reference: Tartakovsky(2007) - Simulations of reactive transport
+              // and precipitation with sph
+              // The constants give better results...
+              ni = rho[i] / imass;
+              nj = rho[j] / jmass;
+              deltacA = (1.0/(imass*r))*
+                ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+              dcA[i] = dcA[i] + deltacA;
+            } // fluid-fluid interaction
+            else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
+              if (r <= phase_support[itype][jtype]) {
+                deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
+                dcA[i] = dcA[i] - deltacA;
               }
-
-              if ((itype==1) && (jtype==1)) { // fluid-fluid interaction
-                jmass = rmass[j];
-                // Calculating the particle exchange
-                // Reference: Tartakovsky(2007) - Simulations of reactive transport
-                // and precipitation with sph
-                // The constants give better results...
-                ni = rho[i] / imass;
-                nj = rho[j] / jmass;
-                deltacA = (1.0/(imass*r))*
-                  ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
-                dcA[i] = dcA[i] + deltacA;
-              } // fluid-fluid interaction
-              else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
-                if (r <= phase_support[itype][jtype]) {
-                  deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
-                  dcA[i] = dcA[i] - deltacA;
-                }
-              } // fluid-solid interaction
-              else if ((itype==2) && (jtype==1)) { // solid-fluid interaction
-                if (r <= phase_support[itype][jtype]) {
-                  dmA[i] = dmA[i] + imass*RA[i]*(cA[j] - cAeq[j]);
-                }
-              } // solid-fluid interaction
-            } // check if j particle is inside kernel
-          } // check if j particle is inside domain
-        } // check if j atom is either local or ghost
+            } // fluid-solid interaction
+            else if ((itype==2) && (jtype==1)) { // solid-fluid interaction
+              if (r <= phase_support[itype][jtype]) {
+                dmA[i] = dmA[i] + (imass + mA[i])*RA[i]*(cA[j] - cAeq[j]);
+              }
+            } // solid-fluid interaction
+          } // check if j particle is inside kernel
+        } // check if j particle is inside domain
       } // jj loop
     } // check i atom is inside domain
   } // ii loop
@@ -243,7 +240,6 @@ void PairSPHConcASurfaceReactionMultiPhase::allocate() {
 
   memory->create(cutsq, n + 1, n + 1, "pair:cutsq");
   memory->create(cut, n + 1, n + 1, "pair:cut");
-  memory->create(kernel_support, n + 1, n + 1, "pair:kernel_support");
   memory->create(phase_support, n + 1, n + 1, "pair:phase_support");
 }
 
@@ -277,8 +273,7 @@ void PairSPHConcASurfaceReactionMultiPhase::coeff(int narg, char **arg) {
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
     for (int j = MAX(jlo,i); j <= jhi; j++) {
-      cut[i][j] = 4.0*kernel_one;
-      kernel_support[i][j] = kernel_one;
+      cut[i][j] = kernel_one;
       phase_support[i][j] = phase_one;
       setflag[i][j] = 1;
       count++;
@@ -300,7 +295,6 @@ double PairSPHConcASurfaceReactionMultiPhase::init_one(int i, int j) {
   }
 
   cut[j][i] = cut[i][j];
-  kernel_support[j][i] = kernel_support[i][j];
   phase_support[j][i] = phase_support[i][j];
   
   return cut[i][j];
