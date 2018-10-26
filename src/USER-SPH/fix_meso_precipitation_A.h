@@ -40,8 +40,9 @@ class FixMesoPrecipitationA : public Fix {
   class NeighList *list;
   
  protected:
+  double neighbor_cutoff, mAthres, cAeq;
   double *step_respa;
-  double *cA, *cAeq, *dcA, *mA, *dmA, *RA, *mAthres, *rmass;
+  double *cA, *mA;
   double *ischangecA;
   int mass_require;
 

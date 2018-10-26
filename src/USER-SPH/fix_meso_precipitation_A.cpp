@@ -44,10 +44,27 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "fix meso/precipitation command requires atom_style with both energy and density, e.g. meso");
 
-  if (narg != 3)
+  if (narg != 6)
     error->all(FLERR,"Illegal number of arguments for fix meso/precipitation command");
 
   time_integrate = 0;
+
+  // Obtain the neighbor cutoff distance
+  int m = 3;
+  neighbor_cutoff = atof(arg[m++]);
+  mAthres = atof(arg[m++]);
+  cAeq = atof(arg[m++]);
+  if (neighbor_cutoff <= 0) {
+    error->all(FLERR,"Illegal value for neighbor cutoff distance");
+  }
+
+  if (mAthres <= 0) {
+    error->all(FLERR,"Illegal value for mass threshold");
+  }
+
+  if (cAeq <= 0) {
+    error->all(FLERR,"Illegal value for equilibrium concentration");
+  }
   
   // find the concentration property
   int fcA;
@@ -57,38 +74,6 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
         "Can't find property cA for fix meso/precipitationA"); 
   cA = atom->dvector[icA];
 
-  // find the equlibrium concentration property
-  int fcAeq;
-  int icAeq = atom->find_custom("cAeq", fcAeq);
-  if (icAeq < 0)
-    error->all(FLERR,
-        "Can't find property cAeq for fix meso/precipitationA");
-  cAeq = atom->dvector[icAeq];
-  
-  // find the concentration property
-  int fdcA;
-  int idcA = atom->find_custom("dcA", fdcA);
-  if (icA < 0)
-    error->all(FLERR,
-        "Can't find property dcA for fix meso/precipitationA"); 
-  dcA = atom->dvector[idcA];
-
-  // find the solid-liquid interaction
-  int fRA;
-  int iRA = atom->find_custom("RA", fRA);
-  if (iRA < 0)
-    error->all(FLERR,
-        "Can't find property RA for fix meso/precipitationA");
-  RA = atom->dvector[iRA];
-
-  // find the solid-liquid interaction
-  int fdmA;
-  int idmA = atom->find_custom("dmA", fdmA);
-  if (idmA < 0)
-    error->all(FLERR,
-        "Can't find property dmA for fix meso/precipitationA");
-  dmA = atom->dvector[idmA];
-
   // find the mass of A property
   int fmA;
   int imA = atom->find_custom("mA", fmA);
@@ -96,14 +81,6 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "Can't find property mA for fix meso/precipitationA");
   mA = atom->dvector[imA];
-  
-  // find the mass threshold property
-  int fmAthres;
-  int imAthres = atom->find_custom("mAthres", fmAthres);
-  if (imAthres < 0)
-    error->all(FLERR,
-        "Can't find property mAthres for fix meso/precipitationA");
-  mAthres = atom->dvector[imAthres];
 
   // set comm size by this fix
   comm_reverse = 1;
@@ -177,9 +154,10 @@ void FixMesoPrecipitationA::end_of_step()
     i = ilist[ii];
     itype = type[i];
 
+    if (i<nlocal) {
     // Only deal with solid particles
     if (itype == 2) {
-      if (mA[i] >= mAthres[i]) { // precipitation
+      if (mA[i] >= mAthres) { // precipitation
         // Check neighbouring atoms
         jnum = numneigh[i];
         jlist = firstneigh[i];
@@ -198,7 +176,10 @@ void FixMesoPrecipitationA::end_of_step()
           delz = x[i][2] - x[j][2];
           r = sqrt(delx*delx + dely*dely + delz*delz);
 
-          if ((r<shortest) && (jtype==1)) {
+          // To avoid the ghost region effect, limit the range for search
+          if ((r<shortest) && (jtype==1) && (r<=neighbor_cutoff)) {
+            // check that we are not triggering precipitation in ghost zone
+            // Also, to avoid one precipitation triggering many
             foundShortest = true;
             shortest = r;
             jshortest = j;
@@ -207,14 +188,17 @@ void FixMesoPrecipitationA::end_of_step()
 
         // if there is a closest liquid particle
         if (foundShortest) {
+          // printf("nall %d nlocal %d i %d jshortest %d shortest %f neighbor_cutoff %f \n",
+          //        nall, nlocal, i, jshortest, shortest, neighbor_cutoff);
           // Trigger phase change for i and j
           ischangecA[i] += 1.0;
           ischangecA[jshortest] += 1.0;
         }
       }
-      else if (mA[i] <= -mAthres[i]) { // Dissolution
+      else if (mA[i] <= -mAthres) { // Dissolution
         ischangecA[i] += 1.0;
       }
+    }
     }
   }
 
@@ -223,8 +207,9 @@ void FixMesoPrecipitationA::end_of_step()
 
   // Then loop through the local atoms to see if there is a trigger
   for (i = 0; i < nlocal; i++) {
-    if (ischangecA[i] != 0.0) {
-      // Phase change happening
+    if (ischangecA[i] > 0.01) {
+      // printf("changing \n");
+     // Phase change happening
       if (type[i] == 1) {
         // Changing liquid into solid
         mA[i] = 0.0;
@@ -236,21 +221,18 @@ void FixMesoPrecipitationA::end_of_step()
       }
       else if (type[i] == 2) {
         // changing solid into liquid
-        if (mA[i] <= -mAthres[i]) {
+        if (mA[i] < -mAthres) {
           mA[i] = 0.0; // mass becomes 0.0 for dissolution
           type[i] = 1; // convert solid to liquid
-          cA[i] = cAeq[i]; // concentration reach back to equilibrium
+          cA[i] = cAeq; // concentration reach back to equilibrium
         }
-        else if (mA[i] >= mAthres[i]) {
+        else if (mA[i] >= mAthres) {
           // Only causing the particle to reduce the mass
-          mA[i] = mA[i] - mAthres[i];
+          mA[i] = mA[i] - mAthres;
         }
       }
     }
   }
-
-  // Now send the new information forward
-  comm->forward_comm_fix(this);
 
   // Destroy the memory created for ischangecA
   memory->destroy(ischangecA);
