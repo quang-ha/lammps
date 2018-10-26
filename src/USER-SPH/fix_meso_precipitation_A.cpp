@@ -44,20 +44,15 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "fix meso/precipitation command requires atom_style with both energy and density, e.g. meso");
 
-  if (narg != 6)
+  if (narg != 5)
     error->all(FLERR,"Illegal number of arguments for fix meso/precipitation command");
 
   time_integrate = 0;
 
   // Obtain the neighbor cutoff distance
   int m = 3;
-  neighbor_cutoff = atof(arg[m++]);
   mAthres = atof(arg[m++]);
   cAeq = atof(arg[m++]);
-  if (neighbor_cutoff <= 0) {
-    error->all(FLERR,"Illegal value for neighbor cutoff distance");
-  }
-
   if (mAthres <= 0) {
     error->all(FLERR,"Illegal value for mass threshold");
   }
@@ -177,7 +172,7 @@ void FixMesoPrecipitationA::end_of_step()
           r = sqrt(delx*delx + dely*dely + delz*delz);
 
           // To avoid the ghost region effect, limit the range for search
-          if ((r<shortest) && (jtype==1) && (r<=neighbor_cutoff)) {
+          if ((r<shortest) && (jtype==1)) {
             // check that we are not triggering precipitation in ghost zone
             // Also, to avoid one precipitation triggering many
             foundShortest = true;
@@ -188,8 +183,6 @@ void FixMesoPrecipitationA::end_of_step()
 
         // if there is a closest liquid particle
         if (foundShortest) {
-          // printf("nall %d nlocal %d i %d jshortest %d shortest %f neighbor_cutoff %f \n",
-          //        nall, nlocal, i, jshortest, shortest, neighbor_cutoff);
           // Trigger phase change for i and j
           ischangecA[i] += 1.0;
           ischangecA[jshortest] += 1.0;
@@ -208,8 +201,7 @@ void FixMesoPrecipitationA::end_of_step()
   // Then loop through the local atoms to see if there is a trigger
   for (i = 0; i < nlocal; i++) {
     if (ischangecA[i] > 0.01) {
-      // printf("changing \n");
-     // Phase change happening
+      // Phase change happening
       if (type[i] == 1) {
         // Changing liquid into solid
         mA[i] = 0.0;
