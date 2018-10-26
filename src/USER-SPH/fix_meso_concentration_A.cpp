@@ -77,9 +77,6 @@ FixMesoConcentrationA::FixMesoConcentrationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "Can't find property mA for fix meso/concentrationA");
   mA = atom->dvector[imA];
-
-  // Set the communication size
-  comm_forward = 2;
 }
 
 /* ---------------------------------------------------------------------- */
