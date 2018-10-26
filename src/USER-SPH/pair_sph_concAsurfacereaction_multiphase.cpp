@@ -327,7 +327,6 @@ void PairSPHConcASurfaceReactionMultiPhase::unpack_forward_comm(int n, int first
 int PairSPHConcASurfaceReactionMultiPhase::pack_reverse_comm(int n, int first, double *buf)
 {
   int i,m,last;
-  int *type = atom->type;
   
   m = 0;
   last = first + n;
@@ -343,7 +342,6 @@ int PairSPHConcASurfaceReactionMultiPhase::pack_reverse_comm(int n, int first, d
 void PairSPHConcASurfaceReactionMultiPhase::unpack_reverse_comm(int n, int *list, double *buf)
 {
   int i,j,m;
-  int *type = atom->type;
   
   m = 0;
   for (i = 0; i < n; i++) {
