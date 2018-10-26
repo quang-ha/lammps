@@ -143,6 +143,7 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
         j &= NEIGHMASK;
         // check that we are only doing local and ghost atoms only
         jtype = type[j];
+        jmass = rmass[j];
 
         // check if the j particles is within the domain
         if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
@@ -169,7 +170,6 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
             }
 
             if ((itype==1) && (jtype==1)) { // fluid-fluid interaction
-              jmass = rmass[j];
               // Calculating the particle exchange
               // Reference: Tartakovsky(2007) - Simulations of reactive transport
               // and precipitation with sph
@@ -188,7 +188,7 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
             } // fluid-solid interaction
             else if ((itype==2) && (jtype==1)) { // solid-fluid interaction
               if (r <= phase_support[itype][jtype]) {
-                dmA[i] = dmA[i] + (imass + mA[i])*RA*(cA[j] - cAeq);
+                dmA[i] = dmA[i] + (jmass)*RA*(cA[j] - cAeq);
               }
             } // solid-fluid interaction
           } // check if j particle is inside kernel
