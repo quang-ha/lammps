@@ -54,14 +54,6 @@ FixMesoConcentrationA::FixMesoConcentrationA(LAMMPS *lmp, int narg, char **arg) 
         "Can't find property cA for fix meso/concentrationA");
   cA = atom->dvector[icA];
 
-  // find the equlibrium concentration property
-  int fcAeq;
-  int icAeq = atom->find_custom("cAeq", fcAeq);
-  if (icAeq < 0)
-    error->all(FLERR,
-        "Can't find property cAeq for fix meso/concentrationA");
-  cAeq = atom->dvector[icAeq];
-
   // find the concentration property
   int fdcA;
   int idcA = atom->find_custom("dcA", fdcA);
@@ -69,14 +61,6 @@ FixMesoConcentrationA::FixMesoConcentrationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "Can't find property dcA for fix meso/concentrationA");
   dcA = atom->dvector[idcA];
-
-  // find the solid-liquid interaction
-  int fRA;
-  int iRA = atom->find_custom("RA", fRA);
-  if (iRA < 0)
-    error->all(FLERR,
-        "Can't find property RA for fix meso/concentrationA");
-  RA = atom->dvector[iRA];
 
   // find the solid-liquid interaction
   int fdmA;
@@ -93,14 +77,6 @@ FixMesoConcentrationA::FixMesoConcentrationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "Can't find property mA for fix meso/concentrationA");
   mA = atom->dvector[imA];
-
-  // find the mass threshold property
-  int fmAthres;
-  int imAthres = atom->find_custom("mAthres", fmAthres);
-  if (imAthres < 0)
-    error->all(FLERR,
-        "Can't find property mAthres for fix meso/concentrationA");
-  mAthres = atom->dvector[imAthres];
 
   // Set the communication size
   comm_forward = 2;

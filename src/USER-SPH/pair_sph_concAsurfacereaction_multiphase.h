@@ -28,8 +28,9 @@ namespace LAMMPS_NS {
     void unpack_reverse_comm(int, int *, double *);
     
   protected:
+    double RA, cAeq;
     double **cut, **phase_support;
-    double *cA, *dcA, *DA, *RA, *cAeq, *mA, *dmA, *mAthres;
+    double *cA, *dcA, *DA, *mA, *dmA;
     void allocate();
   };
 }

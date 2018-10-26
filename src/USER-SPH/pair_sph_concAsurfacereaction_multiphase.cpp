@@ -27,14 +27,6 @@ PairSPHConcASurfaceReactionMultiPhase::PairSPHConcASurfaceReactionMultiPhase(LAM
     error->all(FLERR,
         "Can't find property cA for pair_style sph/concAsurfacereaction/multiphase");
   cA = atom->dvector[icA];
-
-  // find the equlibrium concentration property
-  int fcAeq;
-  int icAeq = atom->find_custom("cAeq", fcAeq);
-  if (icAeq < 0)
-    error->all(FLERR,
-        "Can't find property cAeq for pair_style sph/concAsurfacereaction/multiphase");
-  cAeq = atom->dvector[icAeq];
   
   // find the local concentration property
   int fdcA;
@@ -52,14 +44,6 @@ PairSPHConcASurfaceReactionMultiPhase::PairSPHConcASurfaceReactionMultiPhase(LAM
         "Can't find property DA for pair_style sph/concAsurfacereaction/multiphase");
   DA = atom->dvector[iDA];
 
-  // find the solid-liquid interaction
-  int fRA;
-  int iRA = atom->find_custom("RA", fRA);
-  if (iRA < 0)
-    error->all(FLERR,
-        "Can't find property RA for pair_style sph/concAsurfacereaction/multiphase");
-  RA = atom->dvector[iRA];
-
   // find the change in mass of A property
   int fdmA;
   int idmA = atom->find_custom("dmA", fdmA);
@@ -76,14 +60,6 @@ PairSPHConcASurfaceReactionMultiPhase::PairSPHConcASurfaceReactionMultiPhase(LAM
         "Can't find property mA for pair_style sph/concAsurfacereaction/multiphase");
   mA = atom->dvector[imA];
   
-  // find the mass threshold property
-  int fmAthres;
-  int imAthres = atom->find_custom("mAthres", fmAthres);
-  if (imAthres < 0)
-    error->all(FLERR,
-        "Can't find property mAthres for pair_style sph/concAsurfacereaction/multiphase");
-  mAthres = atom->dvector[imAthres];
-
   // set comm size needed by this pair
   comm_forward = 3;
   comm_reverse = 2;
@@ -206,13 +182,13 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
             } // fluid-fluid interaction
             else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
               if (r <= phase_support[itype][jtype]) {
-                deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
+                deltacA = 1.0*RA*(cA[i] - cAeq);
                 dcA[i] = dcA[i] - deltacA;
               }
             } // fluid-solid interaction
             else if ((itype==2) && (jtype==1)) { // solid-fluid interaction
               if (r <= phase_support[itype][jtype]) {
-                dmA[i] = dmA[i] + (imass + mA[i])*RA[i]*(cA[j] - cAeq[j]);
+                dmA[i] = dmA[i] + (imass + mA[i])*RA*(cA[j] - cAeq);
               }
             } // solid-fluid interaction
           } // check if j particle is inside kernel
@@ -258,17 +234,22 @@ void PairSPHConcASurfaceReactionMultiPhase::settings(int narg, char **arg) {
  ------------------------------------------------------------------------- */
 
 void PairSPHConcASurfaceReactionMultiPhase::coeff(int narg, char **arg) {
-  if (narg != 4)
-    error->all(FLERR,"Incorrect number of args for pair_style sph/concprecipitation coefficients");
+  if (narg != 6)
+    error->all(FLERR,"Incorrect number of args for pair_style sph/concsurfacereaction coefficients");
   if (!allocated)
     allocate();
 
   int ilo, ihi, jlo, jhi;
   force->bounds(FLERR,arg[0], atom->ntypes, ilo, ihi);
   force->bounds(FLERR,arg[1], atom->ntypes, jlo, jhi);
-  
+
+  // Get kernel size
   double kernel_one = force->numeric(FLERR,arg[2]);
   double phase_one = force->numeric(FLERR,arg[3]);
+
+  // Get the reaction parameters
+  cAeq = force->numeric(FLERR,arg[4]);
+  RA = force->numeric(FLERR,arg[5]);
   
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {

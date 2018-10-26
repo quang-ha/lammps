@@ -38,7 +38,7 @@ class FixMesoConcentrationA : public Fix {
  protected:
   double dtcA;
   double *step_respa;
-  double *cA, *cAeq, *dcA, *mA, *dmA, *RA, *mAthres, *rmass;
+  double *cA, *dcA, *mA, *dmA;
   int mass_require;
 
   class Pair *pair;
