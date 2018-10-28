@@ -207,9 +207,9 @@ void FixMesoPrecipitationA::end_of_step()
         mA[i] = 0.0;
         type[i] = 2; // convert the liquid to the solid
         cA[i] = 0.0; // concentration is 0.0
-	v[i][0] = 0.0; // set velocity to 0.0
-	v[i][1] = 0.0;
-	v[i][2] = 0.0;
+        v[i][0] = 0.0; // set velocity to 0.0
+        v[i][1] = 0.0;
+        v[i][2] = 0.0;
       }
       else if (type[i] == 2) {
         // changing solid into liquid
