@@ -130,9 +130,9 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
     // check that we are only doing local and ghost atoms only
     itype = type[i];
     // check if the i particles is within the domain
-    if (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
-             x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
-             x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2])) {
+    if ((is_periodic==1) || (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
+                                  x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
+                                  x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2]))) {
       jlist = firstneigh[i];
       jnum = numneigh[i];
 
@@ -146,9 +146,10 @@ void PairSPHConcASurfaceReactionMultiPhase::compute(int eflag, int vflag) {
         jmass = rmass[j];
 
         // check if the j particles is within the domain
-        if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-                 x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-                 x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
+        // also check if the periodicity of reaction is required
+        if ((is_periodic==1) || (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+                                      x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+                                      x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))) {
           delx = x[i][0] - x[j][0];
           dely = x[i][1] - x[j][1];
           delz = x[i][2] - x[j][2];
@@ -234,7 +235,7 @@ void PairSPHConcASurfaceReactionMultiPhase::settings(int narg, char **arg) {
  ------------------------------------------------------------------------- */
 
 void PairSPHConcASurfaceReactionMultiPhase::coeff(int narg, char **arg) {
-  if (narg != 6)
+  if (narg != 7)
     error->all(FLERR,"Incorrect number of args for pair_style sph/concsurfacereaction coefficients");
   if (!allocated)
     allocate();
@@ -250,6 +251,9 @@ void PairSPHConcASurfaceReactionMultiPhase::coeff(int narg, char **arg) {
   // Get the reaction parameters
   cAeq = force->numeric(FLERR,arg[4]);
   RA = force->numeric(FLERR,arg[5]);
+
+  // Check if periodicity for transport is allowed
+  is_periodic = force->numeric(FLERR,arg[6]);
   
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {

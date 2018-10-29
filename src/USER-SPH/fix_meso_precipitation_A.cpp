@@ -29,6 +29,7 @@
 #include "memory.h"
 #include "error.h"
 #include "pair.h"
+#include "domain.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -44,7 +45,7 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "fix meso/precipitation command requires atom_style with both energy and density, e.g. meso");
 
-  if (narg != 5)
+  if (narg != 6)
     error->all(FLERR,"Illegal number of arguments for fix meso/precipitation command");
 
   time_integrate = 0;
@@ -53,13 +54,13 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
   int m = 3;
   mAthres = atof(arg[m++]);
   cAeq = atof(arg[m++]);
-  if (mAthres <= 0) {
+  is_periodic = atoi(arg[m++]);
+  if (mAthres <= 0)
     error->all(FLERR,"Illegal value for mass threshold");
-  }
-
-  if (cAeq <= 0) {
+  if (cAeq <= 0)
     error->all(FLERR,"Illegal value for equilibrium concentration");
-  }
+  if ((is_periodic!=0) && (is_periodic!=1))
+    error->all(FLERR,"Illegal value for setting periodicity of reaction");
   
   // find the concentration property
   int fcA;
@@ -149,48 +150,55 @@ void FixMesoPrecipitationA::end_of_step()
     i = ilist[ii];
     itype = type[i];
 
-    if (i<nlocal) {
-      // Only deal with local solid particles
-      if (itype == 2) {
-        if (mA[i] >= mAthres) { // precipitation
-          // Check neighbouring atoms
-          jnum = numneigh[i];
-          jlist = firstneigh[i];
+    // Only deal with local solid particles
+    // and check for periodicity
+    if (((i<nlocal) && (itype == 2)) &&
+        ((is_periodic==1) || (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
+                                   x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
+                                   x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2]))) ) {
+      if (mA[i] >= mAthres) { // precipitation
+        // Check neighbouring atoms
+        jnum = numneigh[i];
+        jlist = firstneigh[i];
 
-          // Then need to find the closest fluid particles
-          shortest = 100000.0;
-          foundShortest = false;
+        // Then need to find the closest fluid particles
+        shortest = 100000.0;
+        foundShortest = false;
 
-          for (jj = 0; jj < jnum; jj++) {
-            j = jlist[jj];
-            j &= NEIGHMASK;
-            jtype = type[j];
+        for (jj = 0; jj < jnum; jj++) {
+          j = jlist[jj];
+          j &= NEIGHMASK;
+          jtype = type[j];
 
+          // Check for periodicity
+          if ((is_periodic==1) || (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+                                        x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+                                        x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))) {
             delx = x[i][0] - x[j][0];
             dely = x[i][1] - x[j][1];
             delz = x[i][2] - x[j][2];
             r = sqrt(delx*delx + dely*dely + delz*delz);
 
-            // To avoid the ghost region effect, limit the range for search
+            // find and store the shortest distance
             if ((r<shortest) && (jtype==1)) {
               // check that we are not triggering precipitation in ghost zone
               // Also, to avoid one precipitation triggering many
               foundShortest = true;
               shortest = r;
               jshortest = j;
-            }
-          } // for loop to find closest fluid
+            } // find and store the shortest distance
+          } // check for periodicity
+        } // for loop to find closest fluid
 
-          // if there is a closest liquid particle
-          if (foundShortest) {
-            // Trigger phase change for i and j
-            ischangecA[i] += 1.0;
-            ischangecA[jshortest] += 1.0;
-          }
-        }
-        else if (mA[i] <= -mAthres) { // Dissolution
+        // if there is a closest liquid particle
+        if (foundShortest) {
+          // Trigger phase change for i and j
           ischangecA[i] += 1.0;
+          ischangecA[jshortest] += 1.0;
         }
+      }
+      else if (mA[i] <= -mAthres) { // Dissolution
+        ischangecA[i] += 1.0;
       }
     }
   }
