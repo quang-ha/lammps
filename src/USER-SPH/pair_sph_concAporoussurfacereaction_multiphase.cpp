@@ -27,14 +27,6 @@ PairSPHConcAPorousSurfaceReactionMultiPhase::PairSPHConcAPorousSurfaceReactionMu
     error->all(FLERR,
         "Can't find property cA for pair_style sph/concAporoussurfacereaction/multiphase");
   cA = atom->dvector[icA];
-
-  // find the equlibrium concentration property
-  int fcAeq;
-  int icAeq = atom->find_custom("cAeq", fcAeq);
-  if (icAeq < 0)
-    error->all(FLERR,
-        "Can't find property cAeq for pair_style sph/concAporoussurfacereaction/multiphase");
-  cAeq = atom->dvector[icAeq];
   
   // find the local concentration property
   int fdcA;
@@ -52,22 +44,14 @@ PairSPHConcAPorousSurfaceReactionMultiPhase::PairSPHConcAPorousSurfaceReactionMu
         "Can't find property DA for pair_style sph/concAporoussurfacereaction/multiphase");
   DA = atom->dvector[iDA];
 
-  // find the solid-liquid interaction
-  int fRA;
-  int iRA = atom->find_custom("RA", fRA);
-  if (iRA < 0)
+  // find the mass of A property
+  int fmA;
+  int imA = atom->find_custom("mA", fmA);
+  if (imA < 0)
     error->all(FLERR,
-        "Can't find property RA for pair_style sph/concAporoussurfacereaction/multiphase");
-  RA = atom->dvector[iRA];
+        "Can't find property mA for pair_style sph/concAporoussurfacereaction/multiphase");
+  mA = atom->dvector[imA];
 
-  // find the effective reaction inside solid
-  int fkA;
-  int ikA = atom->find_custom("kA", fkA);
-  if (ikA < 0)
-    error->all(FLERR,
-        "Can't find property kA for pair_style sph/concAporoussurfacereaction/multiphase");
-  kA = atom->dvector[ikA];
-  
   // find the change in mass property
   int fdmA;
   int idmA = atom->find_custom("dmA", fdmA);
@@ -75,14 +59,6 @@ PairSPHConcAPorousSurfaceReactionMultiPhase::PairSPHConcAPorousSurfaceReactionMu
     error->all(FLERR,
         "Can't find property dmA for pair_style sph/concAporoussurfacereaction/multiphase");
   dmA = atom->dvector[idmA];
-
-  // find the mass threshold property
-  int fmAthres;
-  int imAthres = atom->find_custom("mAthres", fmAthres);
-  if (imAthres < 0)
-    error->all(FLERR,
-        "Can't find property mAthres for pair_style sph/concAporoussurfacereaction/multiphase");
-  mAthres = atom->dvector[imAthres];
 
   // set comm size needed by this pair
   comm_forward = 2;
@@ -96,7 +72,7 @@ PairSPHConcAPorousSurfaceReactionMultiPhase::~PairSPHConcAPorousSurfaceReactionM
     memory->destroy(setflag);
     memory->destroy(cutsq);
     memory->destroy(cut);
-    memory->destroy(phasecut);
+    memory->destroy(phase_support);
   }
 }
 
@@ -148,88 +124,88 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::compute(int eflag, int vflag) 
   // Communicate the local cA to the ghost atoms
   comm->forward_comm_pair(this);
   
+  // loop over neighbors of my atoms and do heat diffusion
+  for (ii = 0; ii < inum; ii++)
+    {
+      dmA[ii] = 0.0;
+      dcA[ii] = 0.0;
+    }
+
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
+    // check that we are only doing local and ghost atoms only
     itype = type[i];
-
-    xtmp = x[i][0];
-    ytmp = x[i][1];
-    ztmp = x[i][2];	
-
     // check if the i particles is within the domain
-    if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
-	     ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
-	     ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2]))
-      {
-	// Diffusion for both solid and liquid
-	jlist = firstneigh[i];
-	jnum = numneigh[i];
-	
-	imass = rmass[i];
-	
-	for (jj = 0; jj < jnum; jj++) {
-	  j = jlist[jj];
-	  j &= NEIGHMASK;
-	  jtype = type[j];
-	  
-	  // check if the j particles is within the domain
-	  if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-		   x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-		   x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
-	    {
-	      delx = xtmp - x[j][0];
-	      dely = ytmp - x[j][1];
-	      delz = ztmp - x[j][2];
-	      rsq = delx * delx + dely * dely + delz * delz;
-	      
-	      if (rsq < cutsq[itype][jtype]) {
-		h = cut[itype][jtype];
-		ih = 1.0/h;
-		
-		// kernel function
-		if (domain->dimension == 3) {
-		  wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
-		  wfd = wfd*ih*ih*ih*ih;
-		  wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
-		} else {
-		  wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
-		  wfd = wfd*ih*ih*ih;
-		  wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
-		}
-		
-		jmass = rmass[j];
-		
-		// Calculating the particle exchange
-		// Reference: Tartakovsky(2007) - Simulations of reactive transport
-		// and precipitation with sph
-		// The constants give better results...
-		ni = rho[i] / imass;
-		nj = rho[j] / jmass;
-		deltacA = (1.0/(imass*sqrt(rsq)))*
-		  ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
-		dcA[i] = dcA[i] + deltacA;
-	      }
-	      if (jtype == 2) // if jtype is solid
-		{
-		  d = phasecut[itype][jtype];
-		  if (sqrt(rsq) <= d)
-		    {
-		      deltacA = 1.0*RA[i]*(cA[i] - cAeq[i]);
-		      dcA[i] = dcA[i] - deltacA;
-		      dmA[j] = dmA[j] + jmass*RA[j]*(cA[i] - cAeq[i]);
-		    }
-		} // jtype solid
-	    } // check if j particle is inside
-	} // jj loop
+    if (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
+             x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
+             x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2])) {
+      jlist = firstneigh[i];
+      jnum = numneigh[i];
 
-	// extra reaction for solid
-	if (itype == 2)
-	  {
-	    // Self-decay for porous
-	    dcA[i] = dcA[i] - kA[i]*(cA[i] - cAeq[i]);
-	  }
-      } // check i atom is inside domain
+      imass = rmass[i];
+
+      for (jj = 0; jj < jnum; jj++) {
+        j = jlist[jj];
+        j &= NEIGHMASK;
+        // check that we are only doing local and ghost atoms only
+        jtype = type[j];
+        jmass = rmass[j];
+
+        // check if the j particles is within the domain
+        if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+                 x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+                 x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2])) {
+          delx = x[i][0] - x[j][0];
+          dely = x[i][1] - x[j][1];
+          delz = x[i][2] - x[j][2];
+          double r = sqrt(delx * delx + dely * dely + delz * delz);
+
+          if (r < cut[itype][jtype]) {
+            h = cut[itype][jtype];
+            ih = 1.0/h;
+
+            // kernel function
+            if (domain->dimension == 3) {
+              wfd = sph_dw_quintic3d(r*ih);
+              wfd = wfd*ih*ih*ih*ih;
+              wf = sph_kernel_quintic3d(r*ih)*ih*ih*ih;
+            } else {
+              wfd = sph_dw_quintic2d(r*ih);
+              wfd = wfd*ih*ih*ih;
+              wf = sph_kernel_quintic2d(r*ih)*ih*ih;
+            }
+
+	    // Calculating the particle exchange
+	    // Reference: Tartakovsky(2007) - Simulations of reactive transport
+	    // and precipitation with sph
+	    // The constants give better results...
+	    // Now a solid-fluid diffusion in porous material
+	    ni = rho[i] / imass;
+	    nj = rho[j] / jmass;
+	    deltacA = (1.0/(imass*r))*
+	      ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
+	    dcA[i] = dcA[i] + deltacA;
+
+            if ((itype==1) && (jtype==2)) { // fluid-solid interaction
+              if (r <= phase_support[itype][jtype]) {
+                deltacA = 1.0*RA*(cA[i] - cAeq);
+                dcA[i] = dcA[i] - deltacA;
+              }
+            } // fluid-solid interaction
+            else if ((itype==2) && (jtype==1)) { // solid-fluid interaction
+              if (r <= phase_support[itype][jtype]) {
+                dmA[i] = dmA[i] + (jmass)*RA*(cA[j] - cAeq);
+              }
+            } // solid-fluid interaction
+	    else if (itype==2) { // self-decay inside porous solid
+	      dcA[i] = dcA[i] - kA*(cA[i] - cAeq);
+	    }
+          } // check if j particle is inside kernel
+        } // check if j particle is inside domain
+      } // jj loop
+    } // check i atom is inside domain
   } // ii loop
+
   // Communicate the ghost dcA and dmA to the locally owned atoms
   comm->reverse_comm_pair(this);
 }
@@ -249,7 +225,7 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::allocate() {
 
   memory->create(cutsq, n + 1, n + 1, "pair:cutsq");
   memory->create(cut, n + 1, n + 1, "pair:cut");
-  memory->create(phasecut, n + 1, n + 1, "pair:phasecut");
+  memory->create(phase_support, n + 1, n + 1, "pair:phase_support");
 }
 
 /* ----------------------------------------------------------------------
@@ -259,7 +235,7 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::allocate() {
 void PairSPHConcAPorousSurfaceReactionMultiPhase::settings(int narg, char **arg) {
   if (narg != 0)
     error->all(FLERR,
-        "Illegal number of setting arguments for pair_style sph/concprecipitation");
+        "Illegal number of setting arguments for pair_style sph/concAporoussurfacereaction");
 }
 
 /* ----------------------------------------------------------------------
@@ -267,23 +243,29 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::settings(int narg, char **arg)
  ------------------------------------------------------------------------- */
 
 void PairSPHConcAPorousSurfaceReactionMultiPhase::coeff(int narg, char **arg) {
-  if (narg != 4)
-    error->all(FLERR,"Incorrect number of args for pair_style sph/concprecipitation coefficients");
+  if (narg != 7)
+    error->all(FLERR,"Incorrect number of args for pair_style sph/concAporoussurfacereaction coefficients");
   if (!allocated)
     allocate();
 
   int ilo, ihi, jlo, jhi;
   force->bounds(FLERR,arg[0], atom->ntypes, ilo, ihi);
   force->bounds(FLERR,arg[1], atom->ntypes, jlo, jhi);
-  
-  double cut_one = force->numeric(FLERR,arg[2]);
-  double phasecut_one = force->numeric(FLERR,arg[3]);
+
+  // Get kernel size
+  double kernel_one = force->numeric(FLERR,arg[2]);
+  double phase_one = force->numeric(FLERR,arg[3]);
+
+  // Get the reaction parameters
+  cAeq = force->numeric(FLERR,arg[4]);
+  RA = force->numeric(FLERR,arg[5]);
+  kA = force->numeric(FLERR,arg[6]);
   
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
     for (int j = MAX(jlo,i); j <= jhi; j++) {
-      cut[i][j] = cut_one;
-      phasecut[i][j] = phasecut_one;
+      cut[i][j] = kernel_one;
+      phase_support[i][j] = phase_one;
       setflag[i][j] = 1;
       count++;
     }
@@ -304,7 +286,7 @@ double PairSPHConcAPorousSurfaceReactionMultiPhase::init_one(int i, int j) {
   }
 
   cut[j][i] = cut[i][j];
-  phasecut[j][i] = phasecut[i][j];
+  phase_support[j][i] = phase_support[i][j];
   
   return cut[i][j];
 }
@@ -326,12 +308,11 @@ int PairSPHConcAPorousSurfaceReactionMultiPhase::pack_forward_comm(int n, int *l
   int i, j, m;
 
   m = 0;
-  for (i = 0; i < n; i++)
-    {
-      j = list[i];
-      buf[m++] = cA[j];
-      buf[m++] = dcA[j];
-    }
+  for (i = 0; i < n; i++) {
+    j = list[i];
+    buf[m++] = cA[j];
+    buf[m++] = mA[j];
+  }
   return m;
 }
 
@@ -342,11 +323,10 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::unpack_forward_comm(int n, int
   int i, m, last;
   m = 0;
   last = first + n;
-  for (i = first; i < last; i++)
-    {
-      cA[i] = buf[m++];
-      dcA[i] = buf[m++];
-    }
+  for (i = first; i < last; i++) {
+    cA[i] = buf[m++];
+    mA[i] = buf[m++];
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -376,5 +356,5 @@ void PairSPHConcAPorousSurfaceReactionMultiPhase::unpack_reverse_comm(int n, int
 
     dcA[j] += buf[m++];
     dmA[j] += buf[m++];
-  }
+ }
 }
