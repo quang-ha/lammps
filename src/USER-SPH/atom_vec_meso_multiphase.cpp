@@ -838,7 +838,7 @@ int AtomVecMesoMultiPhase::unpack_exchange(double *buf) {
   tag[nlocal] = (tagint) ubuf(buf[m++]).i;
   type[nlocal] = (int) ubuf(buf[m++]).i;
   mask[nlocal] = (int) ubuf(buf[m++]).i;
-  image[nlocal] = (int) ubuf(buf[m++]).i;
+  image[nlocal] = (imageint) ubuf(buf[m++]).i;
   rho[nlocal] = buf[m++];
   colorgradient[nlocal][0] = buf[m++];
   colorgradient[nlocal][1] = buf[m++];
@@ -1002,7 +1002,7 @@ void AtomVecMesoMultiPhase::create_atom(int itype, double *coord) {
    initialize other atom quantities
    ------------------------------------------------------------------------- */
 
-void AtomVecMesoMultiPhase::data_atom(double *coord, tagint imagetmp, char **values) {
+void AtomVecMesoMultiPhase::data_atom(double *coord, imageint imagetmp, char **values) {
   int nlocal = atom->nlocal;
   if (nlocal == nmax)
     grow(0);
