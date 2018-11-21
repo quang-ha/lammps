@@ -29,6 +29,7 @@
 #include "memory.h"
 #include "error.h"
 #include "pair.h"
+#include "domain.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -44,10 +45,22 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "fix meso/precipitation command requires atom_style with both energy and density, e.g. meso");
 
-  if (narg != 3)
+  if (narg != 6)
     error->all(FLERR,"Illegal number of arguments for fix meso/precipitation command");
 
   time_integrate = 0;
+
+  // Obtain the neighbor cutoff distance
+  int m = 3;
+  mAthres = atof(arg[m++]);
+  cAeq = atof(arg[m++]);
+  is_periodic = atoi(arg[m++]);
+  if (mAthres <= 0)
+    error->all(FLERR,"Illegal value for mass threshold");
+  if (cAeq <= 0)
+    error->all(FLERR,"Illegal value for equilibrium concentration");
+  if ((is_periodic!=0) && (is_periodic!=1))
+    error->all(FLERR,"Illegal value for setting periodicity of reaction");
   
   // find the concentration property
   int fcA;
@@ -57,38 +70,6 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
         "Can't find property cA for fix meso/precipitationA"); 
   cA = atom->dvector[icA];
 
-  // find the equlibrium concentration property
-  int fcAeq;
-  int icAeq = atom->find_custom("cAeq", fcAeq);
-  if (icAeq < 0)
-    error->all(FLERR,
-        "Can't find property cAeq for fix meso/precipitationA");
-  cAeq = atom->dvector[icAeq];
-  
-  // find the concentration property
-  int fdcA;
-  int idcA = atom->find_custom("dcA", fdcA);
-  if (icA < 0)
-    error->all(FLERR,
-        "Can't find property dcA for fix meso/precipitationA"); 
-  dcA = atom->dvector[idcA];
-
-  // find the solid-liquid interaction
-  int fRA;
-  int iRA = atom->find_custom("RA", fRA);
-  if (iRA < 0)
-    error->all(FLERR,
-        "Can't find property RA for fix meso/precipitationA");
-  RA = atom->dvector[iRA];
-
-  // find the solid-liquid interaction
-  int fdmA;
-  int idmA = atom->find_custom("dmA", fdmA);
-  if (idmA < 0)
-    error->all(FLERR,
-        "Can't find property dmA for fix meso/precipitationA");
-  dmA = atom->dvector[idmA];
-
   // find the mass of A property
   int fmA;
   int imA = atom->find_custom("mA", fmA);
@@ -96,26 +77,20 @@ FixMesoPrecipitationA::FixMesoPrecipitationA(LAMMPS *lmp, int narg, char **arg) 
     error->all(FLERR,
         "Can't find property mA for fix meso/precipitationA");
   mA = atom->dvector[imA];
-  
-  // find the mass threshold property
-  int fmAthres;
-  int imAthres = atom->find_custom("mAthres", fmAthres);
-  if (imAthres < 0)
-    error->all(FLERR,
-        "Can't find property mAthres for fix meso/precipitationA");
-  mAthres = atom->dvector[imAthres];
 
   // set comm size by this fix
-  comm_forward = 5;
-  comm_reverse = 5;
+  comm_reverse = 1;
+}
+
+/* ---------------------------------------------------------------------- */
+
+FixMesoPrecipitationA::~FixMesoPrecipitationA() {
 }
 
 /* ---------------------------------------------------------------------- */
 
 int FixMesoPrecipitationA::setmask() {
   int mask = 0;
-  mask |= INITIAL_INTEGRATE;
-  mask |= FINAL_INTEGRATE;
   mask |= END_OF_STEP;
   return mask;
 }
@@ -123,9 +98,6 @@ int FixMesoPrecipitationA::setmask() {
 /* ---------------------------------------------------------------------- */
 
 void FixMesoPrecipitationA::init() {
-  dtv = update->dt;
-  dtf = 0.5*update->dt*force->ftm2v;
-
   // need a full neighbor list, built whenever re-neighboring occurs
   int irequest = neighbor->request((void *) this);
   neighbor->requests[irequest]->pair = 0;
@@ -141,57 +113,15 @@ void FixMesoPrecipitationA::init_list(int, NeighList *ptr)
   list = ptr;
 }
 
-/* ----------------------------------------------------------------------
- allow for both per-type and per-atom mass
- ------------------------------------------------------------------------- */
-
-void FixMesoPrecipitationA::initial_integrate(int vflag) {  
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  int *type = atom->type;
-  
-  int i;
-
-  if (igroup == atom->firstgroup)
-    nlocal = atom->nfirst;
-
-  for (i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit) {
-      cA[i] += dtf * dcA[i]; // half-step update of particle precipitation
-      if (type[i] == 2) // Only update mass for solid particles
-	mA[i] += dtf*dmA[i];
-    }
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixMesoPrecipitationA::final_integrate() {
-  
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  int *type = atom->type;
-  
-  if (igroup == atom->firstgroup)
-    nlocal = atom->nfirst;
-
-  for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit) {
-      cA[i] += dtf*dcA[i];
-      if (type[i] == 2) // Only update mass for solid particles
-	mA[i] += dtf*dmA[i];
-    }
-  }
-}
-
 /* ---------------------------------------------------------------------- */
 
 void FixMesoPrecipitationA::end_of_step()
 {
-  int i, j, ii, jj, itype, jtype, jshortest;
+  int i, j, ii, jj, itype, jtype, jshortest, inum, jnum;
+  int *ilist, *jlist, *numneigh, **firstneigh;
 
   double delx, dely, delz;
-  double shortest, xtmp, ytmp, ztmp, rsq, r;
+  double shortest, rsq, r;
   
   double **x = atom->x;
   double **v = atom->v;
@@ -199,127 +129,113 @@ void FixMesoPrecipitationA::end_of_step()
 
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
-  int* numneigh = list->numneigh;
+  int nall = nlocal + atom->nghost;
+
+  inum = list->inum;
+  ilist = list->ilist;
+  numneigh = list->numneigh;
+  firstneigh = list->firstneigh;
 
   bool foundShortest;
+
+  // Create memory for ischangecA
+  memory->create(ischangecA, nall, "fix:ischangecA");
   
-  for (i = 0; i < nlocal; i++) {
+  // Initilise all phase change variables
+  for (i=0; i < nall; i++) {
+    ischangecA[i] = 0.0;
+  }
+
+  for (ii=0; ii<inum; ii++) {
+    i = ilist[ii];
     itype = type[i];
 
-    // Only deal with solid particles
-    if (itype == 2)
-      {
-	if (mA[i] >= mAthres[i]) // precipitation
-	  {
-	    // Keep the position of the solid particle
-	    xtmp = x[i][0];
-	    ytmp = x[i][1];
-	    ztmp = x[i][2];
-	    
-	    // Check neighbouring atoms
-	    int** firstneigh = list->firstneigh;
-	    int jnum = numneigh[i];
-	    int* jlist = firstneigh[i];
-    	    
-	    // Then need to find the closest fluid particles
-	    shortest = 1000.0;
-	    foundShortest = false;
+    // Only deal with local solid particles
+    // and check for periodicity
+    if (((i<nlocal) && (itype == 2)) &&
+        ((is_periodic==1) || (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
+                                   x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
+                                   x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2]))) ) {
+      if (mA[i] >= mAthres) { // precipitation
+        // Check neighbouring atoms
+        jnum = numneigh[i];
+        jlist = firstneigh[i];
 
-	    for (jj = 0; jj < jnum; jj++) {
-	      j = jlist[jj];
-	      j &= NEIGHMASK;	    
-	      jtype = type[j];
-	      
-	      if (jtype == 1) // if liquid particle then check for shortest distance
-		{
-		  delx = xtmp - x[j][0];
-		  dely = ytmp - x[j][1];
-		  delz = ztmp - x[j][2];
-		  r = sqrt(delx*delx + dely*dely + delz*delz);
-		  
-		  if (r < shortest)
-		    {
-		      foundShortest = true;
-		      shortest = r;
-		      jshortest = j;
-		    }
-		} // ifliquid
-	    } // for loop to find closest fluid
-	    
-	    // if there is a closest liquid particle
-	    if (foundShortest)
-	      {
-		// printf("WARNING: Precipitation particles! \n");
-	        mA[i] = mA[i] - mAthres[i];
-		mA[jshortest] = 0.0;
-		type[jshortest] = 2; // convert the liquid to the solid
-		cA[jshortest] = 0.0; // concentration is 0.0
-		dcA[jshortest] = 0.0; // change in concentration is also 0.0
-		v[jshortest][0] = 0.0; // set velocity to 0.0
-		v[jshortest][1] = 0.0;
-		v[jshortest][2] = 0.0;
-	      }
-	  }
-	else if (mA[i] <= -mAthres[i]) // Dissolution
-	  {
-	    // printf("WARNING: Dissolution particles! \n");
-	    mA[i] = 0.0; // mass becomes 0.0
-	    dmA[i] = 0.0; // change in mass also becomes 0.0
-	    type[i] = 1; // convert solid to liquid
-	    cA[i] = cAeq[i]; // concentration reach back to equilibrium
-	    dcA[i] = 0.0; // change of concentration to 0.0
-	  }
+        // Then need to find the closest fluid particles
+        shortest = 100000.0;
+        foundShortest = false;
+
+        for (jj = 0; jj < jnum; jj++) {
+          j = jlist[jj];
+          j &= NEIGHMASK;
+          jtype = type[j];
+
+          // Check for periodicity
+          if ((is_periodic==1) || (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+                                        x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+                                        x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))) {
+            delx = x[i][0] - x[j][0];
+            dely = x[i][1] - x[j][1];
+            delz = x[i][2] - x[j][2];
+            r = sqrt(delx*delx + dely*dely + delz*delz);
+
+            // find and store the shortest distance
+            if ((r<shortest) && (jtype==1)) {
+              // check that we are not triggering precipitation in ghost zone
+              // Also, to avoid one precipitation triggering many
+              foundShortest = true;
+              shortest = r;
+              jshortest = j;
+            } // find and store the shortest distance
+          } // check for periodicity
+        } // for loop to find closest fluid
+
+        // if there is a closest liquid particle
+        if (foundShortest) {
+          // Trigger phase change for i and j
+          ischangecA[i] += 1.0;
+          ischangecA[jshortest] += 1.0;
+        }
       }
+      else if (mA[i] <= -mAthres) { // Dissolution
+        ischangecA[i] += 1.0;
+      }
+    }
   }
-  // comm->forward_comm_fix(this);
-  // comm->reverse_comm_fix(this);
-}
 
-/* ---------------------------------------------------------------------- */
+  // Send the phase change status in reverse first
+  comm->reverse_comm_fix(this);
 
-void FixMesoPrecipitationA::reset_dt() {
-  dtv = update->dt;
-  dtf = 0.5 * update->dt * force->ftm2v;
-}
-
-/* ---------------------------------------------------------------------- */
-
-int FixMesoPrecipitationA::pack_forward_comm(int n, int *list, double *buf,
-					     int pbc_flag, int *pbc)
-{
-  int i, j, m;
-  int *type = atom->type;
-  
-  m = 0;
-  for (i = 0; i < n; i++)
-    {
-      j = list[i];
-      buf[m++] = mA[j];
-      buf[m++] = dmA[j];
-      buf[m++] = cA[j];
-      buf[m++] = dcA[j];
-      buf[m++] = type[j];
+  // Then loop through the local atoms to see if there is a trigger
+  for (i = 0; i < nlocal; i++) {
+    if (ischangecA[i] > 0.01) {
+      // Phase change happening
+      if (type[i] == 1) {
+        // Changing liquid into solid
+        mA[i] = 0.0;
+        type[i] = 2; // convert the liquid to the solid
+        cA[i] = 0.0; // concentration is 0.0
+        v[i][0] = 0.0; // set velocity to 0.0
+        v[i][1] = 0.0;
+        v[i][2] = 0.0;
+      }
+      else if (type[i] == 2) {
+        // changing solid into liquid
+        if (mA[i] < -mAthres) {
+          mA[i] = 0.0; // mass becomes 0.0 for dissolution
+          type[i] = 1; // convert solid to liquid
+          cA[i] = cAeq; // concentration reach back to equilibrium
+        }
+        else if (mA[i] >= mAthres) {
+          // Only causing the particle to reduce the mass
+          mA[i] = mA[i] - mAthres;
+        }
+      }
     }
-  return m;
-}
+  }
 
-/* ---------------------------------------------------------------------- */
-
-void FixMesoPrecipitationA::unpack_forward_comm(int n, int first, double *buf)
-{
-  int i, m, last;
-  int *type = atom->type;
-  
-  m = 0;
-  last = first + n;
-  for (i = first; i < last; i++)
-    {
-      mA[i] = buf[m++];
-      dmA[i] = buf[m++];
-      cA[i] = buf[m++];
-      dcA[i] = buf[m++];
-      type[i] = buf[m++];
-    }
+  // Destroy the memory created for ischangecA
+  memory->destroy(ischangecA);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -331,15 +247,10 @@ int FixMesoPrecipitationA::pack_reverse_comm(int n, int first, double *buf)
   
   m = 0;
   last = first + n;
-  for (i = first; i < last; i++)
-    {
-      buf[m++] = mA[i];
-      buf[m++] = dmA[i];
-      buf[m++] = cA[i];
-      buf[m++] = dcA[i];
-      buf[m++] = type[i];
-    }
-  return m;
+  for (i = first; i < last; i++) {
+    buf[m++] = ischangecA[i];
+  }
+ return m;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -350,13 +261,8 @@ void FixMesoPrecipitationA::unpack_reverse_comm(int n, int *list, double *buf)
   int *type = atom->type;
   
   m = 0;
-  for (i = 0; i < n; i++)
-    {
-      j = list[i];
-      mA[j] = buf[m++];
-      dmA[j] = buf[m++];
-      cA[j] = buf[m++];
-      dcA[j] = buf[m++];
-      type[j] = buf[m++];
-    }
+  for (i = 0; i < n; i++) {
+    j = list[i];
+    ischangecA[j] += buf[m++];
+  }
 }

@@ -27,18 +27,18 @@ namespace LAMMPS_NS {
 class FixMesoConcentrationA : public Fix {
  public:
   FixMesoConcentrationA(class LAMMPS *, int, char **);
+  virtual ~FixMesoConcentrationA();
   int setmask();
   virtual void init();
-  virtual void initial_integrate(int);
   virtual void final_integrate();
   void reset_dt();
-  
+
  private:
   class NeighList *list;
  protected:
-  double dtv,dtf;
+  double dtcA;
   double *step_respa;
-  double *cA, *dcA;
+  double *cA, *dcA, *mA, *dmA;
   int mass_require;
 
   class Pair *pair;
