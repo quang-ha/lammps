@@ -28,8 +28,21 @@ namespace LAMMPS_NS {
     void unpack_reverse_comm(int, int *, double *);
     
   protected:
-    double **cut, **phasecut;
-    double *cA, *dcA, *yA, *dyA, *yAmax, *DA, *kAa, *kAd, *thetaA, *sA;
+    double **cut;
+    // Mass fraction for aqueous species and absrobed species
+    double *xA, *dxA, *yA, *dyA;
+    // Normalised mass fraction
+    double *thetaA;
+    // Binary diffusion coefficient
+    double *DA;
+    // Maximum absorbed concentration
+    double yAmax;
+    // Adsorption and desorption rate coefficient
+    double kaA, kdA;
+    // Number of adsorption sites needed
+    int lambda;
+    // Check if periodic property is on
+    int is_periodic;
     void allocate();
   };
 }

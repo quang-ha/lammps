@@ -30,7 +30,6 @@ class FixMesoConcALangmuir : public Fix {
   int setmask();
   virtual void init();
   virtual void init_list(int, class NeighList *);
-  virtual void initial_integrate(int);
   virtual void final_integrate();
   virtual void end_of_step();
   void reset_dt();
@@ -39,10 +38,10 @@ class FixMesoConcALangmuir : public Fix {
   class NeighList *list;
 
  protected:
-  double dtv,dtf;
+  double dtxA;
   double h;
-  double *step_respa;
-  double *cA, *dcA, *yA, *dyA, *yAmax, *DA, *kAa, *kAd, *thetaA, *sA;
+  double *xA, *dxA, *yA, *dyA, *DA, *thetaA;
+  double sAmax;
   int mass_require;
 
   class Pair *pair;

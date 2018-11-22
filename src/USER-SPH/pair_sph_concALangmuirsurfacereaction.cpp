@@ -20,23 +20,23 @@ PairSPHConcALangmuirSurfaceReaction::PairSPHConcALangmuirSurfaceReaction(LAMMPS 
 {
   restartinfo = 0;
 
-  // find the concentration property
-  int fcA;
-  int icA = atom->find_custom("cA", fcA);
-  if (icA < 0)
+  // find the aqueous mass fraction property
+  int fxA;
+  int ixA = atom->find_custom("xA", fxA);
+  if (ixA < 0)
     error->all(FLERR,
-        "Can't find property cA for pair_style sph/concALangmuirsurfacereaction");
-  cA = atom->dvector[icA];
+        "Can't find property xA for pair_style sph/concALangmuirsurfacereaction");
+  xA = atom->dvector[ixA];
   
-  // find the local concentration property
-  int fdcA;
-  int idcA = atom->find_custom("dcA", fdcA);
-  if (idcA < 0)
+  // find the change in aqueous mass fraction concentration property
+  int fdxA;
+  int idxA = atom->find_custom("dxA", fdxA);
+  if (idxA < 0)
     error->all(FLERR,
-        "Can't find property dcA for pair_style sph/concALangmuirsurfacereaction");
-  dcA = atom->dvector[idcA];
+        "Can't find property dxA for pair_style sph/concALangmuirsurfacereaction");
+  dxA = atom->dvector[idxA];
 
-  // find the mass fraction property
+  // find the absorbed mass fraction property
   int fyA;
   int iyA = atom->find_custom("yA", fyA);
   if (iyA < 0)
@@ -44,46 +44,14 @@ PairSPHConcALangmuirSurfaceReaction::PairSPHConcALangmuirSurfaceReaction(LAMMPS 
         "Can't find property yA for pair_style sph/concALangmuirsurfacereaction");
   yA = atom->dvector[iyA];
 
-  // find the change in the mass fraction
+  // find the change in the absorbed mass fraction
   int fdyA;
   int idyA = atom->find_custom("dyA", fdyA);
   if (idyA < 0)
     error->all(FLERR,
         "Can't find property dyA for pair_style sph/concALangmuirsurfacereaction");
   dyA = atom->dvector[idyA];
-  
-  // find the maximum mass fraction property
-  int fyAmax;
-  int iyAmax = atom->find_custom("yAmax", fyAmax);
-  if (iyAmax < 0)
-    error->all(FLERR,
-        "Can't find property yAmax for pair_style sph/concALangmuirsurfacereaction");
-  yAmax = atom->dvector[iyAmax];
-  
-  // find the local diffusivity constant
-  int fDA;
-  int iDA = atom->find_custom("DA", fDA);
-  if (iDA < 0)
-    error->all(FLERR,
-        "Can't find property DA for pair_style sph/concALangmuirsurfacereaction");
-  DA = atom->dvector[iDA];
 
-  // find the adsorption rate
-  int fkAa;
-  int ikAa = atom->find_custom("kAa", fkAa);
-  if (ikAa < 0)
-    error->all(FLERR,
-        "Can't find property kAa for pair_style sph/concALangmuirsurfacereaction");
-  kAa = atom->dvector[ikAa];
-
-  // find the desorption rate
-  int fkAd;
-  int ikAd = atom->find_custom("kAd", fkAd);
-  if (ikAd < 0)
-    error->all(FLERR,
-        "Can't find property kAd for pair_style sph/concALangmuirsurfacereaction");
-  kAd = atom->dvector[ikAd];
-    
   // find the normalised concentration of adsorbed species
   int fthetaA;
   int ithetaA = atom->find_custom("thetaA", fthetaA);
@@ -92,17 +60,17 @@ PairSPHConcALangmuirSurfaceReaction::PairSPHConcALangmuirSurfaceReaction(LAMMPS 
         "Can't find property thetaA for pair_style sph/concALangmuirsurfacereaction");
   thetaA = atom->dvector[ithetaA];
 
-  // Find the maximum surface concentration
-  int fsA;
-  int isA = atom->find_custom("sA", fsA);
-  if (isA < 0)
+  // find the local diffusivity constant
+  int fDA;
+  int iDA = atom->find_custom("DA", fDA);
+  if (iDA < 0)
     error->all(FLERR,
-        "Can't find property sA for pair_style sph/concALangmuirsurfacereaction");
-  sA = atom->dvector[isA];
+        "Can't find property DA for pair_style sph/concALangmuirsurfacereaction");
+  DA = atom->dvector[iDA];
 
   // set comm size needed by this pair
-  comm_forward = 5;
-  comm_reverse = 3;
+  comm_forward = 3;
+  comm_reverse = 2;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -128,12 +96,12 @@ void PairSPHConcALangmuirSurfaceReaction::init_style()
 
 void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
   int i, j, ii, jj, inum, jnum, itype, jtype;
-  double xtmp, ytmp, ztmp, delx, dely, delz;
+  double delx, dely, delz;
   double xNij, yNij, zNij, Nij;
   
   int *ilist, *jlist, *numneigh, **firstneigh;
   double imass, jmass, h, ih, ihsq;
-  double rsq, wf, wfd, D, K, deltacA;
+  double rsq, wf, wfd, D, K, deltaxA;
 
   double ni, nj;
   
@@ -154,108 +122,118 @@ void PairSPHConcALangmuirSurfaceReaction::compute(int eflag, int vflag) {
   ilist = list->ilist;
   numneigh = list->numneigh;
   firstneigh = list->firstneigh;
-  
+
+  // Communicate the local xA to the ghost atoms
+  comm->forward_comm_pair(this);
+
   // loop over neighbors of my atoms and do heat diffusion
   for (ii = 0; ii < inum; ii++)
     {
       dyA[ii] = 0.0;
-      dcA[ii] = 0.0;
+      dxA[ii] = 0.0;
     }
-
-  // Communicate the local cA to the ghost atoms
-  comm->forward_comm_pair(this);
   
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
     itype = type[i];
 
-    xtmp = x[i][0];
-    ytmp = x[i][1];
-    ztmp = x[i][2];	
-
     // check if the i particles is within the domain
-    if (not (xtmp < domain->boxlo[0] || xtmp > domain->boxhi[0] ||
-	     ytmp < domain->boxlo[1] || ytmp > domain->boxhi[1] ||
-	     ztmp < domain->boxlo[2] || ztmp > domain->boxhi[2]))
-       { 
-	 if (itype == 1) // only do diffusion for ifluid particle
-	   {
-	     jlist = firstneigh[i];
-	     jnum = numneigh[i];
-	     
-	     imass = rmass[i];
-	     
-	     for (jj = 0; jj < jnum; jj++) {
-	       j = jlist[jj];
-	       j &= NEIGHMASK;
-	       jtype = type[j];
+    if ((is_periodic==1) || (not (x[i][0] < domain->boxlo[0] || x[i][0] > domain->boxhi[0] ||
+				  x[i][1] < domain->boxlo[1] || x[i][1] > domain->boxhi[1] ||
+				  x[i][2] < domain->boxlo[2] || x[i][2] > domain->boxhi[2]))) {
+      jlist = firstneigh[i];
+      jnum = numneigh[i];
 
-	       // check if the j particles is within the domain
-	       if (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
-			x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
-			x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))
-		 {
-		   delx = x[j][0] - xtmp;
-		   dely = x[j][1] - ytmp;
-		   delz = x[j][2] - ztmp;
-		   rsq = delx * delx + dely * dely + delz * delz;
-		   
-		   // Check if j is within the support kernel
-		   if (rsq < cutsq[itype][jtype]) {
-		     h = cut[itype][jtype];
-		     ih = 1.0/h;
-		     
-		     // kernel function
-		     if (domain->dimension == 3) {
-		       wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
-		       wfd = wfd*ih*ih*ih*ih;
-		       wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
-		     } else {
-		       wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
-		       wfd = wfd*ih*ih*ih;
-		       wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
-		     }
-		     
-		     // Perform interaction calculation
-		     if (jtype == 1) { // this is only for fluid-fluid interaction 			 
-		       jmass = rmass[j];
-		       
-		       // Calculating the particle exchange
-		       // Reference: Tartakovsky(2007) - Simulations of reactive transport
-		       // and precipitation with sph
-		       // The constants give better results...
-		       ni = rho[i] / imass;
-		       nj = rho[j] / jmass;
-		       deltacA = (1.0/(imass*sqrt(rsq)))*
-			 ((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(cA[i] - cA[j])*wfd;
-		       dcA[i] = dcA[i] + deltacA;
-		     }
-		     else { // if jtype is solid
-                       jmass = rmass[j];
-		       // Calculate the normal vector of colour gradient
-                       // Since the colour gradient is pointing AWAY from the surface, this needs to be modified
-                       // to match the definition from Ryan's paper
-                       xNij = -cg[i][0] + cg[j][0];
-		       yNij = -cg[i][1] + cg[j][1];
-		       zNij = -cg[i][2] + cg[j][2];
-                       // Check if Nijsq is zero
-                       double Nijsq = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
-		       Nij = (Nijsq == 0.0) ? 0.0 : xNij*delx + yNij*dely + zNij*delz;
-		       // Calculate the exchange in concentration
-		       ni = rho[i] / imass;
-		       nj = rho[j] / jmass;
-		       deltacA = (kAa[i]*cA[i]*(1-thetaA[j])*(1-thetaA[j]) - (kAd[i]*thetaA[j]*thetaA[j])/(ni*imass))*
-		         (2.0*(itype-jtype)*Nij*wfd)/(nj+ni);
-		       dcA[i] = dcA[i] - deltacA;
-		       dyA[j] = dyA[j] + deltacA;
-		     } // jtype solid
-		   } // check within support kernel
-		 } // check if j particle is inside
-	     } // jj loop
-	   } //itype fluid
-       } // check i atom is inside domain
+      imass = rmass[i];
+
+      for (jj = 0; jj < jnum; jj++) {
+	j = jlist[jj];
+	j &= NEIGHMASK;
+	jtype = type[j];
+	jmass = rmass[j];
+
+	// check if the j particles is within the domain
+	if ((is_periodic==1) || (not (x[j][0] < domain->boxlo[0] || x[j][0] > domain->boxhi[0] ||
+				      x[j][1] < domain->boxlo[1] || x[j][1] > domain->boxhi[1] ||
+				      x[j][2] < domain->boxlo[2] || x[j][2] > domain->boxhi[2]))) {
+	  delx = x[j][0] - x[i][0];
+	  dely = x[j][1] - x[i][1];
+	  delz = x[j][2] - x[i][2];
+	  rsq = delx * delx + dely * dely + delz * delz;
+
+	  // Check if j is within the support kernel
+	  if (rsq < cutsq[itype][jtype]) {
+	    h = cut[itype][jtype];
+	    ih = 1.0/h;
+
+	    // kernel function
+	    if (domain->dimension == 3) {
+	      wfd = sph_dw_quintic3d(sqrt(rsq)*ih);
+	      wfd = wfd*ih*ih*ih*ih;
+	      wf = sph_kernel_quintic3d(sqrt(rsq)*ih)*ih*ih*ih;
+	    } else {
+	      wfd = sph_dw_quintic2d(sqrt(rsq)*ih);
+	      wfd = wfd*ih*ih*ih;
+	      wf = sph_kernel_quintic2d(sqrt(rsq)*ih)*ih*ih;
+	    }
+
+	    // Perform interaction calculation
+	    if ((itype==1) && (jtype==1)) { // this is only for fluid-fluid interaction
+	      jmass = rmass[j];
+
+	      // Calculating the particle exchange
+	      // Reference: Tartakovsky(2007) - Simulations of reactive transport
+	      // and precipitation with sph
+	      // The constants give better results...
+	      ni = rho[i] / imass;
+	      nj = rho[j] / jmass;
+	      deltaxA = (1.0/(imass*sqrt(rsq)))*
+		((DA[i]*ni*imass + DA[j]*nj*jmass)/(ni*nj))*(xA[i] - xA[j])*wfd;
+	      dxA[i] = dxA[i] + deltaxA;
+	    } // fluid-fluid interaction
+	    else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
+	      jmass = rmass[j];
+	      // Calculate the normal vector of colour gradient
+	      // Since the colour gradient is pointing AWAY from the surface, this needs to be modified
+	      // to match the definition from Ryan's paper
+	      xNij = -cg[i][0] + cg[j][0];
+	      yNij = -cg[i][1] + cg[j][1];
+	      zNij = -cg[i][2] + cg[j][2];
+	      // Check if Nijsq is zero
+	      double Nijsq = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
+	      Nij = (Nijsq == 0.0) ? 0.0 : xNij*delx + yNij*dely + zNij*delz;
+	      // Calculate the exchange in concentration
+	      ni = rho[i] / imass;
+	      nj = rho[j] / jmass;
+	      deltaxA = (kaA*xA[i]*pow((1-thetaA[j]), lambda) - (kdA*pow(thetaA[j], lambda))/(ni*imass))*
+		(2.0*(itype-jtype)*Nij*wfd)/(nj+ni);
+	      dxA[i] = dxA[i] - deltaxA;
+	    } // fluid-solid interaction
+	    else if ((itype==2) && (jtype==1)) {
+	      jmass = rmass[j];
+	      // Calculate the normal vector of colour gradient
+	      // Since the colour gradient is pointing AWAY from the surface, this needs to be modified
+	      // to match the definition from Ryan's paper
+	      xNij = -cg[i][0] + cg[j][0];
+	      yNij = -cg[i][1] + cg[j][1];
+	      zNij = -cg[i][2] + cg[j][2];
+	      // Check if Nijsq is zero
+	      double Nijsq = sqrt(xNij*xNij + yNij*yNij + zNij*zNij);
+	      Nij = (Nijsq == 0.0) ? 0.0 : xNij*delx + yNij*dely + zNij*delz;
+	      // Calculate the exchange in concentration
+	      ni = rho[i] / imass;
+	      nj = rho[j] / jmass;
+	      deltaxA = (kaA*xA[j]*pow((1-thetaA[i]), lambda) - (kdA*pow(thetaA[i], lambda))/(ni*imass))*
+		(2.0*(itype-jtype)*Nij*wfd)/(nj+ni);
+	      dyA[i] = dyA[i] - deltaxA;
+	      // printf("Nij %f i %d dyA[i] %f deltaxA %f \n", Nij, i, dyA[i], deltaxA);
+	    }
+	  } // check i-j within support kernel
+	} // check if j particle is inside
+      } // jj loop
+    } // check i atom is inside domain
   } // ii loop
-  // Communicate the ghost dcA and dmA to the locally owned atoms
+  // Communicate the ghost dxA and dmA to the locally owned atoms
   comm->reverse_comm_pair(this);
 }
 
@@ -291,7 +269,7 @@ void PairSPHConcALangmuirSurfaceReaction::settings(int narg, char **arg) {
  ------------------------------------------------------------------------- */
 
 void PairSPHConcALangmuirSurfaceReaction::coeff(int narg, char **arg) {
-  if (narg != 3)
+  if (narg != 7)
     error->all(FLERR,"Incorrect number of args for pair_style sph/concALangmuirsurfacereaction coefficients");
   if (!allocated)
     allocate();
@@ -299,13 +277,22 @@ void PairSPHConcALangmuirSurfaceReaction::coeff(int narg, char **arg) {
   int ilo, ihi, jlo, jhi;
   force->bounds(FLERR,arg[0], atom->ntypes, ilo, ihi);
   force->bounds(FLERR,arg[1], atom->ntypes, jlo, jhi);
-  
-  double cut_one = force->numeric(FLERR,arg[2]);
+
+  // Get kernel size
+  double kernel_one = force->numeric(FLERR, arg[2]);
+
+  // Get the parameters for Langmuir adsorption
+  kaA = force->numeric(FLERR, arg[3]);
+  kdA = force->numeric(FLERR, arg[4]);
+  lambda = force->numeric(FLERR, arg[5]);
+
+  // Check if periodicity for transport is allowed
+  is_periodic = force->numeric(FLERR, arg[6]);
   
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
     for (int j = MAX(jlo,i); j <= jhi; j++) {
-      cut[i][j] = cut_one;
+      cut[i][j] = kernel_one;
       setflag[i][j] = 1;
       count++;
     }
@@ -345,17 +332,14 @@ int PairSPHConcALangmuirSurfaceReaction::pack_forward_comm(int n, int *list, dou
 					     int pbc_flag, int *pbc)
 {
   int i, j, m;
-  int *type = atom->type;
   
   m = 0;
-  for (i = 0; i < n; i++)
-    {
-      j = list[i];
-      buf[m++] = cA[j];
-      buf[m++] = dcA[j];
-      buf[m++] = yA[j];
-      buf[m++] = dyA[j];
-    }
+  for (i = 0; i < n; i++) {
+    j = list[i];
+    buf[m++] = xA[j];
+    buf[m++] = yA[j];
+    buf[m++] = thetaA[j];
+  }
   return m;
 }
 
@@ -364,17 +348,14 @@ int PairSPHConcALangmuirSurfaceReaction::pack_forward_comm(int n, int *list, dou
 void PairSPHConcALangmuirSurfaceReaction::unpack_forward_comm(int n, int first, double *buf)
 {
   int i, m, last;
-  int *type = atom->type;
   
   m = 0;
   last = first + n;
-  for (i = first; i < last; i++)
-    {
-      cA[i] = buf[m++];
-      dcA[i] = buf[m++];
-      yA[i] = buf[m++];
-      dyA[i] = buf[m++];
-    }
+  for (i = first; i < last; i++) {
+    xA[i] = buf[m++];
+    yA[i] = buf[m++];
+    thetaA[i] = buf[m++];
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -382,12 +363,11 @@ void PairSPHConcALangmuirSurfaceReaction::unpack_forward_comm(int n, int first, 
 int PairSPHConcALangmuirSurfaceReaction::pack_reverse_comm(int n, int first, double *buf)
 {
   int i,m,last;
-  int *type = atom->type;
   
   m = 0;
   last = first + n;
   for (i = first; i < last; i++) {
-    buf[m++] = dcA[i];
+    buf[m++] = dxA[i];
     buf[m++] = dyA[i];
   }
   return m;
@@ -398,13 +378,12 @@ int PairSPHConcALangmuirSurfaceReaction::pack_reverse_comm(int n, int first, dou
 void PairSPHConcALangmuirSurfaceReaction::unpack_reverse_comm(int n, int *list, double *buf)
 {
   int i,j,m;
-  int *type = atom->type;
-  
+
   m = 0;
   for (i = 0; i < n; i++) {
     j = list[i];
 
-    dcA[j] += buf[m++];
+    dxA[j] += buf[m++];
     dyA[j] += buf[m++];
   }
 }
