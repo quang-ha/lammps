@@ -35,8 +35,6 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-/* TODO: Make this fix run in parallel */
-
 /* ---------------------------------------------------------------------- */
 
 FixMesoConcAPorousLangmuir::FixMesoConcAPorousLangmuir(LAMMPS *lmp, int narg, char **arg) :
@@ -46,32 +44,33 @@ FixMesoConcAPorousLangmuir::FixMesoConcAPorousLangmuir(LAMMPS *lmp, int narg, ch
     error->all(FLERR,
         "fix meso/concAporousLangmuir command requires atom_style with both energy and density, e.g. meso");
 
-  if (narg != 4)
+  if (narg != 5)
     error->all(FLERR,"Illegal number of arguments for fix meso/concAporousLangmuir command");
 
   // required args
   int m = 3;
   h = atof(arg[m++]);
+  sAmax = atof(arg[m++]);
 
   time_integrate = 0;
 
-  // find the concentration property
-  int fcA;
-  int icA = atom->find_custom("cA", fcA);
-  if (icA < 0)
+  // find the aqueous mass fraction property
+  int fxA;
+  int ixA = atom->find_custom("xA", fxA);
+  if (ixA < 0)
     error->all(FLERR,
-        "Can't find property cA for fix meso/concAporousLangmuir");
-  cA = atom->dvector[icA];
+        "Can't find property xA for fix meso/concAporousLangmuir");
+  xA = atom->dvector[ixA];
 
-  // find the local concentration property
-  int fdcA;
-  int idcA = atom->find_custom("dcA", fdcA);
-  if (idcA < 0)
+  // find the change in aqueous mass fraction concentration property
+  int fdxA;
+  int idxA = atom->find_custom("dxA", fdxA);
+  if (idxA < 0)
     error->all(FLERR,
-        "Can't find property dcA for fix meso/concAporousLangmuir");
-  dcA = atom->dvector[idcA];
+        "Can't find property dxA for fix meso/concAporousLangmuir");
+  dxA = atom->dvector[idxA];
 
-  // find the mass fraction property
+  // find the absorbed mass fraction property
   int fyA;
   int iyA = atom->find_custom("yA", fyA);
   if (iyA < 0)
@@ -79,45 +78,13 @@ FixMesoConcAPorousLangmuir::FixMesoConcAPorousLangmuir(LAMMPS *lmp, int narg, ch
         "Can't find property yA for fix meso/concAporousLangmuir");
   yA = atom->dvector[iyA];
 
-  // find the change in the mass fraction
+  // find the change in the absorbed mass fraction
   int fdyA;
   int idyA = atom->find_custom("dyA", fdyA);
   if (idyA < 0)
     error->all(FLERR,
         "Can't find property dyA for fix meso/concAporousLangmuir");
   dyA = atom->dvector[idyA];
-
-  // find the maximum mass fraction property
-  int fyAmax;
-  int iyAmax = atom->find_custom("yAmax", fyAmax);
-  if (iyAmax < 0)
-    error->all(FLERR,
-        "Can't find property yAmax for fix meso/concAporousLangmuir");
-  yAmax = atom->dvector[iyAmax];
-
-  // find the local diffusivity constant
-  int fDA;
-  int iDA = atom->find_custom("DA", fDA);
-  if (iDA < 0)
-    error->all(FLERR,
-        "Can't find property DA for fix meso/concAporousLangmuir");
-  DA = atom->dvector[iDA];
-
-  // find the adsorption rate
-  int fkAa;
-  int ikAa = atom->find_custom("kAa", fkAa);
-  if (ikAa < 0)
-    error->all(FLERR,
-        "Can't find property kAa for fix meso/concAporousLangmuir");
-  kAa = atom->dvector[ikAa];
-
-  // find the desorption rate
-  int fkAd;
-  int ikAd = atom->find_custom("kAd", fkAd);
-  if (ikAd < 0)
-    error->all(FLERR,
-        "Can't find property kAd for fix meso/concAporousLangmuir");
-  kAd = atom->dvector[ikAd];
 
   // find the normalised concentration of adsorbed species
   int fthetaA;
@@ -126,37 +93,12 @@ FixMesoConcAPorousLangmuir::FixMesoConcAPorousLangmuir(LAMMPS *lmp, int narg, ch
     error->all(FLERR,
         "Can't find property thetaA for fix meso/concAporousLangmuir");
   thetaA = atom->dvector[ithetaA];
-
-  // Find the maximum surface concentration
-  int fsA;
-  int isA = atom->find_custom("sA", fsA);
-  if (isA < 0)
-    error->all(FLERR,
-        "Can't find property sA for fix meso/concAporousLangmuir");
-  sA = atom->dvector[isA];
-
-  // Find the surface area of solid's pore
-  int fAs;
-  int iAs = atom->find_custom("As", fAs);
-  if (iAs < 0)
-    error->all(FLERR,
-        "Can't find property As for fix meso/concAporousLangmuir");
-  As = atom->dvector[iAs];
-
-  // Find the pore volume of solid's pore
-  int fVp;
-  int iVp = atom->find_custom("Vp", fVp);
-  if (iVp < 0)
-    error->all(FLERR,
-        "Can't find property Vp for fix meso/concAporousLangmuir");
-  Vp = atom->dvector[iVp];
 }
 
 /* ---------------------------------------------------------------------- */
 
 int FixMesoConcAPorousLangmuir::setmask() {
   int mask = 0;
-  mask |= INITIAL_INTEGRATE;
   mask |= FINAL_INTEGRATE;
   mask |= END_OF_STEP;
   return mask;
@@ -165,8 +107,7 @@ int FixMesoConcAPorousLangmuir::setmask() {
 /* ---------------------------------------------------------------------- */
 
 void FixMesoConcAPorousLangmuir::init() {
-  dtv = update->dt;
-  dtf = 0.5*update->dt*force->ftm2v;
+  dtxA = update->dt;
 
   // need a full neighbor list, built whenever re-neighboring occurs
   int irequest = neighbor->request((void *) this);
@@ -178,32 +119,8 @@ void FixMesoConcAPorousLangmuir::init() {
 
 /* ---------------------------------------------------------------------- */
 
-void FixMesoConcAPorousLangmuir::init_list(int, NeighList *ptr)
-{
+void FixMesoConcAPorousLangmuir::init_list(int, NeighList *ptr) {
   list = ptr;
-}
-
-/* ----------------------------------------------------------------------
- allow for both per-type and per-atom mass
- ------------------------------------------------------------------------- */
-
-void FixMesoConcAPorousLangmuir::initial_integrate(int vflag) {
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  int *type = atom->type;
-
-  int i;
-
-  if (igroup == atom->firstgroup)
-    nlocal = atom->nfirst;
-
-  for (i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit) {
-      cA[i] += dtf * dcA[i]; // half-step update of particle concentraion
-      if (type[i] == 2) // Only update mass fraction for solid particles
-        yA[i] += dtf*dyA[i];
-    }
-  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -218,9 +135,9 @@ void FixMesoConcAPorousLangmuir::final_integrate() {
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
-      cA[i] += dtf*dcA[i];
+      xA[i] += dtxA*dxA[i];
       if (type[i] == 2) // Only update mass fraction for solid particels
-        yA[i] += dtf*dyA[i];
+        yA[i] += dtxA*dyA[i];
     }
   }
 }
@@ -239,6 +156,7 @@ void FixMesoConcAPorousLangmuir::end_of_step()
   int *ilist, *jlist, *numneigh, **firstneigh;
   double imass, jmass, ih, ihsq;
   double rsq, wf, wfd;
+  double yAmax;
 
   double **x = atom->x;
   double **v = atom->v;
@@ -273,7 +191,9 @@ void FixMesoConcAPorousLangmuir::end_of_step()
       int jnum = numneigh[i];
       int* jlist = firstneigh[i];
 
-      // variable to check if there are fluid particles in the support
+      // Init value of yAmax to 0
+      yAmax = 0.0;
+      // Variable to check if there are fluid particles in the support
       bool isfluidin = false;
       // Then need to find the closest fluid particles
       for (jj = 0; jj < jnum; jj++) {
@@ -304,7 +224,7 @@ void FixMesoConcAPorousLangmuir::end_of_step()
 
           // Perform interaction calculation
           if (jtype == 1) { // only for fluid particles
-            isfluidin = true;
+	    isfluidin = true;
             jmass = rmass[j];
             // Calculate the normal vector of colour gradient
             // Since the colour gradient is pointing AWAY from the surface, this needs to be modified
@@ -318,29 +238,24 @@ void FixMesoConcAPorousLangmuir::end_of_step()
             // Calculate the exchange in concentration
             ni = rho[i] / imass;
             nj = rho[j] / jmass;
-            yAmax[i] = yAmax[i] + (Nij*wfd*sA[i])/(ni*nj*imass);
+            yAmax = yAmax + (Nij*wfd*sAmax)/(ni*nj*imass);
           } // jtype fluid
         } // loop inside support kernel
       } // for loop jj
       // Calculate the absorbed concentration
       if (isfluidin)
-        thetaA[i] = (yAmax[i] == 0.0) ? 0.0 : (yA[i]/yAmax[i]);
-      else {
-        // within solid domain, use Darcy-scale model
-        yAmax[i] = sA[i]/rho[i];
-        thetaA[i] = yA[i]/yAmax[i];
-      }
+	thetaA[i] = (yAmax == 0.0) ? 0.0 : (yA[i]/yAmax);
+      else
+	thetaA[i] = yA[i]/(sAmax/rho[i]);
+      // printf("i %d thetaA[i] %f ymax %f \n", i, thetaA[i], yAmax);
     } // if i type is solid
   } // loop through i
-  // comm->forward_comm_fix(this);
-  // comm->reverse_comm_fix(this);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixMesoConcAPorousLangmuir::reset_dt() {
-  dtv = update->dt;
-  dtf = 0.5 * update->dt * force->ftm2v;
+  dtxA = update->dt;
 }
 
 /* ---------------------------------------------------------------------- */
