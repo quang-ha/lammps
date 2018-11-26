@@ -176,6 +176,7 @@ compute"_Commands_compute.html doc page are followed by one or more of
 (g,i,k,o,t) to indicate which accelerated styles exist.
 
 "ackland/atom"_compute_ackland_atom.html - 
+"adf"_compute_adf.html - angular distribution function
 "aggregate/atom"_compute_cluster_atom.html - aggregate ID for each atom
 "angle"_compute_angle.html - 
 "angle/local"_compute_angle_local.html - 
@@ -308,7 +309,7 @@ compute"_Commands_compute.html doc page are followed by one or more of
 "temp/uef"_compute_temp_uef.html - 
 "ti"_compute_ti.html - thermodynamic integration free energy values
 "torque/chunk"_compute_torque_chunk.html - torque applied on each chunk
-"vacf"_compute_vacf.html - velocity-autocorrelation function of group of atoms
+"vacf"_compute_vacf.html - velocity auto-correlation function of group of atoms
 "vcm/chunk"_compute_vcm_chunk.html - velocity of center-of-mass for each chunk
 "voronoi/atom"_compute_voronoi_atom.html - Voronoi volume and neighbors for each atom
 "xrd"_compute_xrd.html - :ul
