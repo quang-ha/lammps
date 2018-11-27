@@ -135,14 +135,14 @@ void PairSPHSurfaceReactionSimple::compute(int eflag, int vflag) {
       jlist = firstneigh[i];
       jnum = numneigh[i];
 
-      imass = mass[i];
+      imass = mass[itype];
 
       for (jj = 0; jj < jnum; jj++) {
         j = jlist[jj];
         j &= NEIGHMASK;
         // check that we are only doing local and ghost atoms only
         jtype = type[j];
-        jmass = mass[j];
+        jmass = mass[jtype];
 
         // check if the j particles is within the domain
         // also check if the periodicity of reaction is required
