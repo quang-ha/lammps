@@ -103,7 +103,7 @@ void PairSPHSurfaceReactionSimple::compute(int eflag, int vflag) {
     evflag = vflag_fdotr = 0;
 
   double **x = atom->x;
-  double *mass = atom->mass;
+  double *rmass = atom->rmass;
   double *rho = atom->rho;
   int *type = atom->type;
   int nlocal = atom->nlocal;
@@ -135,14 +135,14 @@ void PairSPHSurfaceReactionSimple::compute(int eflag, int vflag) {
       jlist = firstneigh[i];
       jnum = numneigh[i];
 
-      imass = mass[itype];
+      imass = rmass[i];
 
       for (jj = 0; jj < jnum; jj++) {
         j = jlist[jj];
         j &= NEIGHMASK;
         // check that we are only doing local and ghost atoms only
         jtype = type[j];
-        jmass = mass[jtype];
+        jmass = rmass[j];
 
         // check if the j particles is within the domain
         // also check if the periodicity of reaction is required
