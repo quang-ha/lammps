@@ -48,8 +48,6 @@ namespace LAMMPS_NS {
     double *xA, *dxA;
     // Change in absorbed species
     double *yA, *dyA;
-    // Diffusion coefficient
-    double *DA;
     // Normalised of absorbed concentration
     double *thetaA;
     // Maximum surface concentration
