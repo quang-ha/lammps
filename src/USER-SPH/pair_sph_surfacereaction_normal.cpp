@@ -43,7 +43,7 @@ PairSPHSurfaceReactionNormal::PairSPHSurfaceReactionNormal(LAMMPS *lmp) : Pair(l
   int inz = atom->find_custom("nz", fnz);
   if (inz < 0)
     error->all(FLERR,
-	       "Can't find property nx for pair_style sph/surfacereaction/normal");
+	       "Can't find property nz for pair_style sph/surfacereaction/normal");
   nz = atom->dvector[inz];
 
   // set comm size needed by this Pair
@@ -63,7 +63,7 @@ PairSPHSurfaceReactionNormal::~PairSPHSurfaceReactionNormal() {
 
 /* ----------------------------------------------------------------------
    init specific to this pair style
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void PairSPHSurfaceReactionNormal::init_style() {
   // need a full neighbor list
@@ -183,7 +183,7 @@ void PairSPHSurfaceReactionNormal::compute(int eflag, int vflag) {
 
 /* ----------------------------------------------------------------------
    allocate all arrays
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void PairSPHSurfaceReactionNormal::allocate() {
   allocated = 1;
@@ -200,7 +200,7 @@ void PairSPHSurfaceReactionNormal::allocate() {
 
 /* ----------------------------------------------------------------------
    global settings
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void PairSPHSurfaceReactionNormal::settings(int narg, char **arg) {
   if (narg != 0)
@@ -210,10 +210,10 @@ void PairSPHSurfaceReactionNormal::settings(int narg, char **arg) {
 
 /* ----------------------------------------------------------------------
    set coeffs for one or more type pairs
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void PairSPHSurfaceReactionNormal::coeff(int narg, char **arg) {
-  if (narg != 4)
+  if (narg != 3)
     error->all(FLERR,"Incorrect number of args for sph/surfacereaction/normal coefficients");
   if (!allocated)
     allocate();
@@ -239,7 +239,7 @@ void PairSPHSurfaceReactionNormal::coeff(int narg, char **arg) {
 
 /* ----------------------------------------------------------------------
    init for one type pair i,j and corresponding j,i
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 double PairSPHSurfaceReactionNormal::init_one(int i, int j) {
   if (setflag[i][j] == 0) {
