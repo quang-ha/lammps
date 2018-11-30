@@ -147,26 +147,7 @@ void FixSPHSurfaceReactionLangmuir::init_list(int, NeighList *ptr) {
 
 /* ---------------------------------------------------------------------- */
 
-void FixSPHSurfaceReactionLangmuir::final_integrate() {
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  int *type = atom->type;
-
-  if (igroup == atom->firstgroup)
-    nlocal = atom->nfirst;
-
-  for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit) {
-      xA[i] += dtxA*dxA[i];
-      if (type[i] == 2) // Only update mass fraction for solid particels
-        yA[i] += dtxA*dyA[i];
-    }
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixSPHSurfaceReactionLangmuir::end_of_step()
+void FixSPHSurfaceReactionLangmuir::initial_integrate()
 {
   int i, j, ii, jj, inum, jnum, itype, jtype;
   double di, dj;
@@ -254,15 +235,33 @@ void FixSPHSurfaceReactionLangmuir::end_of_step()
             // Calculate the exchange in concentration
             di = rho[i] / imass;
             dj = rho[j] / jmass;
-            yAmax = yAmax + (nij_rij*wfd*sAmax)/(di*dj*imass);
+            yAmax = yAmax + (itype - jtype)*(nij_rij*abs(wfd)*sAmax)/(di*dj*imass);
           } // jtype fluid
         } // loop inside support kernel
       } // for loop jj
       // Calculate the absorbed concentration
       thetaA[i] = (yAmax == 0.0) ? 0.0 : (yA[i]/yAmax);
-      // printf("i %d thetaA[i] %f ymax %f \n", i, thetaA[i], yAmax);
     } // if i type is solid
   } // loop through i
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixSPHSurfaceReactionLangmuir::final_integrate() {
+  int *mask = atom->mask;
+  int nlocal = atom->nlocal;
+  int *type = atom->type;
+
+  if (igroup == atom->firstgroup)
+    nlocal = atom->nfirst;
+
+  for (int i = 0; i < nlocal; i++) {
+    if (mask[i] & groupbit) {
+      xA[i] += dtxA*dxA[i];
+      if (type[i] == 2) // Only update mass fraction for solid particels
+        yA[i] += dtxA*dyA[i];
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */

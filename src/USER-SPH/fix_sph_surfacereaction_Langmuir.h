@@ -30,8 +30,8 @@ namespace LAMMPS_NS {
     int setmask();
     virtual void init();
     virtual void init_list(int, class NeighList *);
+    virtual void initial_integrate();
     virtual void final_integrate();
-    virtual void end_of_step();
     void reset_dt();
 
   private:

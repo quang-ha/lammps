@@ -119,7 +119,7 @@ void PairSPHSurfaceReactionLangmuir::init_style()
 void PairSPHSurfaceReactionLangmuir::compute(int eflag, int vflag) {
   int i, j, ii, jj, inum, jnum, itype, jtype;
   double delx, dely, delz;
-  double xNij, yNij, zNij, Nij;
+  double xNij, yNij, zNij;
 
   int *ilist, *jlist, *numneigh, **firstneigh;
   double imass, jmass, h, ih, ihsq;
@@ -221,7 +221,7 @@ void PairSPHSurfaceReactionLangmuir::compute(int eflag, int vflag) {
 	      di = rho[i] / imass;
 	      dj = rho[j] / jmass;
 	      deltaxA = (kaA*xA[i]*pow((1-thetaA[j]), lambda) - (kdA*pow(thetaA[j], lambda))/(di*imass))*
-		(2.0*(itype-jtype)*Nij*wfd)/(dj+di);
+		(2.0*(itype-jtype)*nij_rij*abs(wfd))/(dj+di);
 	      dxA[i] = dxA[i] - deltaxA;
 	    } // fluid-solid interaction
 	    else if ((itype==2) && (jtype==1)) {
@@ -236,7 +236,7 @@ void PairSPHSurfaceReactionLangmuir::compute(int eflag, int vflag) {
 	      di = rho[i] / imass;
 	      dj = rho[j] / jmass;
 	      deltaxA = (kaA*xA[j]*pow((1-thetaA[i]), lambda) - (kdA*pow(thetaA[i], lambda))/(di*imass))*
-		(2.0*(itype-jtype)*nij_rij*wfd)/(dj+di);
+		(2.0*(itype-jtype)*nij_rij*abs(wfd))/(dj+di);
 	      dyA[i] = dyA[i] + deltaxA;
 	    }
 	  } // check i-j within support kernel
