@@ -197,19 +197,18 @@ void PairSPHSurfaceReactionLangmuirPorous::compute(int eflag, int vflag) {
 	    }
 
 	    // Perform interaction calculation
-	    if ((itype==1) && (jtype==1)) { // this is only for fluid-fluid interaction
-	      jmass = rmass[j];
-	      // Calculating the particle exchange
-	      // Reference: Tartakovsky(2007) - Simulations of reactive transport
-	      // and precipitation with sph
-	      // The constants give better results...
-	      di = rho[i] / imass;
-	      dj = rho[j] / jmass;
-	      deltaxA = (1.0/(imass*sqrt(rsq)))*
-		((DA[i]*di*imass + DA[j]*dj*jmass)/(di*dj))*(xA[i] - xA[j])*wfd;
-	      dxA[i] = dxA[i] + deltaxA;
-	    } // fluid-fluid interaction
-	    else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
+            jmass = rmass[j];
+            // Calculating the particle exchange
+            // Reference: Tartakovsky(2007) - Simulations of reactive transport
+            // and precipitation with sph
+            // The constants give better results...
+            di = rho[i] / imass;
+            dj = rho[j] / jmass;
+            deltaxA = (1.0/(imass*sqrt(rsq)))*
+              ((DA[i]*di*imass + DA[j]*dj*jmass)/(di*dj))*(xA[i] - xA[j])*wfd;
+            dxA[i] = dxA[i] + deltaxA;
+
+	    if ((itype==1) && (jtype==2)) { // fluid-solid interaction
 	      jmass = rmass[j];
 	      // Calculate the normal vector
 	      xNij = nx[i] + ny[j];
