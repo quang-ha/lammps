@@ -13,20 +13,20 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(sph/surfacereaction/simple/constant,FixSPHSurfaceReactionSimpleConstant)
+FixStyle(sph/surfacereaction/Langmuir/constant,FixSPHSurfaceReactionLangmuirConstant)
 
 #else
 
-#ifndef LMP_FIX_SPH_SURFACEREACTION_SIMPLE_CONSTANT_H
-#define LMP_FIX_SPH_SURFACEREACTION_SIMPLE_CONSTANT_H
+#ifndef LMP_FIX_SPH_SURFACEREACTION_LANGMUIR_CONSTANT_H
+#define LMP_FIX_SPH_SURFACEREACTION_LANGMUIR_CONSTANT_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-  class FixSPHSurfaceReactionSimpleConstant : public Fix {
+  class FixSPHSurfaceReactionLangmuirConstant : public Fix {
   public:
-    FixSPHSurfaceReactionSimpleConstant(class LAMMPS *, int, char **);
+    FixSPHSurfaceReactionLangmuirConstant(class LAMMPS *, int, char **);
     int setmask();
     virtual void initial_integrate(int);
 
@@ -34,9 +34,9 @@ namespace LAMMPS_NS {
     class NeighList *list;
 
   protected:
-    double *cA, *dcA;
+    double *xA, *dxA;
     // Concentration to keep at constant
-    double constcA;
+    double constxA;
 
     class Pair *pair;
   };

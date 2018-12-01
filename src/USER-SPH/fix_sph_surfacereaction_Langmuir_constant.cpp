@@ -13,7 +13,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "fix_sph_surfacereaction_simple_constant.h"
+#include "fix_sph_surfacereaction_Langmuir_constant.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,42 +35,42 @@ using namespace FixConst;
 
 /* ---------------------------------------------------------------------- */
 
-FixSPHSurfaceReactionSimpleConstant::FixSPHSurfaceReactionSimpleConstant(LAMMPS *lmp, int narg, char **arg) :
+FixSPHSurfaceReactionLangmuirConstant::FixSPHSurfaceReactionLangmuirConstant(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg) {
 
   if ((atom->e_flag != 1) || (atom->rho_flag != 1))
     error->all(FLERR,
-	       "fix sph/surfacereaction/simple/constant command requires atom_style with both energy and density, e.g. meso");
+	       "fix sph/surfacereaction/Langmuir/constant command requires atom_style with both energy and density, e.g. meso");
 
   if (narg != 4)
-    error->all(FLERR,"Illegal number of arguments for fix sph/surfacereaction/simple/constant command");
+    error->all(FLERR,"Illegal number of arguments for fix sph/surfacereaction/Langmuir/constant command");
 
   time_integrate = 0;
 
   // Required args
   int m = 3;
-  constcA = atof(arg[m++]);
+  constxA = atof(arg[m++]);
 
   // find the concentration property
-  int fcA;
-  int icA = atom->find_custom("cA", fcA);
-  if (icA < 0)
+  int fxA;
+  int ixA = atom->find_custom("xA", fxA);
+  if (ixA < 0)
     error->all(FLERR,
-	       "Can't find property cA for fix sph/surfacereaction/simple/constant");
-  cA = atom->dvector[icA];
+	       "Can't find property xA for fix sph/surfacereaction/Langmuir/constant");
+  xA = atom->dvector[ixA];
 
   // find the local concentration property
-  int fdcA;
-  int idcA = atom->find_custom("dcA", fdcA);
-  if (idcA < 0)
+  int fdxA;
+  int idxA = atom->find_custom("dxA", fdxA);
+  if (idxA < 0)
     error->all(FLERR,
-	       "Can't find property dcA for fix sph/surfacereaction/simple/constant");
-  dcA = atom->dvector[idcA];
+	       "Can't find property dxA for fix sph/surfacereaction/Langmuir/constant");
+  dxA = atom->dvector[idxA];
 }
 
 /* ---------------------------------------------------------------------- */
 
-int FixSPHSurfaceReactionSimpleConstant::setmask() {
+int FixSPHSurfaceReactionLangmuirConstant::setmask() {
   int mask = 0;
   mask |= INITIAL_INTEGRATE;
   return mask;
@@ -78,7 +78,7 @@ int FixSPHSurfaceReactionSimpleConstant::setmask() {
 
 /* ---------------------------------------------------------------------- */
 
-void FixSPHSurfaceReactionSimpleConstant::initial_integrate(int vflag) {
+void FixSPHSurfaceReactionLangmuirConstant::initial_integrate(int vflag) {
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   int i;
@@ -88,8 +88,8 @@ void FixSPHSurfaceReactionSimpleConstant::initial_integrate(int vflag) {
 
   for (i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
-      cA[i] = constcA; // keep the concentration at the constant level
-      dcA[i] = 0.0; // and the change is 0.0
+      xA[i] = constxA; // keep the concentration at the constant level
+      dxA[i] = 0.0; // and the change is 0.0
     }
   }
 }
