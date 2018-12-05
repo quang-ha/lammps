@@ -119,6 +119,7 @@ void PairSPHRhoSumNew::compute(int eflag, int vflag) {
       for (ii = 0; ii < inum; ii++) {
         i = ilist[ii];
         itype = type[i];
+        double imass = rmass[i];
 
         h = cut[itype][itype];
         if (domain->dimension == 3) {
@@ -126,7 +127,7 @@ void PairSPHRhoSumNew::compute(int eflag, int vflag) {
         } else {
           wf = sph_kernel_quintic2d(0.0) / (h * h);
         }
-        rho[i] = wf;
+        rho[i] = imass*wf;
       } // ii loop
 
       // add density at each atom via kernel function overlap
@@ -143,13 +144,13 @@ void PairSPHRhoSumNew::compute(int eflag, int vflag) {
         for (jj = 0; jj < jnum; jj++) {
           j = jlist[jj];
           j &= NEIGHMASK;
+          double jmass = rmass[j];
 
           jtype = type[j];
           delx = xtmp - x[j][0];
           dely = ytmp - x[j][1];
           delz = ztmp - x[j][2];
           rsq = delx * delx + dely * dely + delz * delz;
-
           if (rsq < cutsq[itype][jtype]) {
             h = cut[itype][jtype];
             ih = 1.0 / h;
@@ -160,12 +161,10 @@ void PairSPHRhoSumNew::compute(int eflag, int vflag) {
               r = sqrt(rsq) * ih;
               wf = sph_kernel_quintic2d(r) * ih * ih ;
             }
-
-            rho[i] += wf;
+            rho[i] += jmass*wf;
           }
 
         } // jj loop
-	rho[i] *= imass;
       } // ii loop
     }
   }
@@ -250,7 +249,7 @@ double PairSPHRhoSumNew::init_one(int i, int j) {
 /* ---------------------------------------------------------------------- */
 
 double PairSPHRhoSumNew::single(int i, int j, int itype, int jtype, double rsq,
-                                       double factor_coul, double factor_lj, double &fforce) {
+                                double factor_coul, double factor_lj, double &fforce) {
   fforce = 0.0;
 
   return 0.0;
@@ -259,7 +258,7 @@ double PairSPHRhoSumNew::single(int i, int j, int itype, int jtype, double rsq,
 /* ---------------------------------------------------------------------- */
 
 int PairSPHRhoSumNew::pack_comm(int n, int *list, double *buf, int pbc_flag,
-                                       int *pbc) {
+                                int *pbc) {
   int i, j, m;
   double *rho = atom->rho;
 
