@@ -22,6 +22,8 @@
 #include "error.h"
 #include "domain.h"
 #include "sph_kernel_quintic.h"
+#include <cfloat>
+#include <algorithm>
 
 using namespace LAMMPS_NS;
 
@@ -165,15 +167,30 @@ void PairSPHTaitwaterNew::compute(int eflag, int vflag) {
 
         // printf("testvar= %f, %f \n", delx, dely);
 
-        f[i][0] += delx * fpair + velx * fvisc;
-        f[i][1] += dely * fpair + vely * fvisc;
-        f[i][2] += delz * fpair + velz * fvisc;
+	if ((isnan(f[i][0])) ||
+	    (isnan(f[i][1])) ||
+	    (isnan(f[i][2]))) {
+	  printf("taitwater new before add\n");
+	  printf("f[i][0] %f f[i][1] %f f[i][2] %f \n", f[i][0], f[i][1], f[i][2]);
+	  printf("delx %f dely %f delz %f velx %f vely %f velz %f fpair %f fvisc %f rho[i] %f rho[j] %f \n");
+	}
+
+        f[i][0] += (isnan(delx*fpair + velx*fvisc) || (abs(delx*fpair + velx*fvisc) < DBL_EPSILON)) ? 0.0 : delx*fpair + velx*fvisc;
+        f[i][1] += (isnan(dely*fpair + vely*fvisc) || (abs(dely*fpair + vely*fvisc) < DBL_EPSILON)) ? 0.0 : dely*fpair + vely*fvisc;
+        f[i][2] += (isnan(delz*fpair + velz*fvisc) || (abs(delz*fpair + velz*fvisc) < DBL_EPSILON)) ? 0.0 : delz*fpair + velz*fvisc;
+
+	if ((isnan(f[i][0])) ||
+	    (isnan(f[i][1])) ||
+	    (isnan(f[i][2]))) {
+	  printf("taitwater new after add\n");
+	  printf("f[i][0] %f f[i][1] %f f[i][2] %f \n", f[i][0], f[i][1], f[i][2]);
+	  printf("delx %f dely %f delz %f velx %f vely %f velz %f fpair %f fvisc %f rho[i] %f rho[j] %f \n");
+	}
 
         if (newton_pair || j < nlocal) {
-          f[j][0] -= delx * fpair + velx * fvisc;
-          f[j][1] -= dely * fpair + vely * fvisc;
-          f[j][2] -= delz * fpair + velz * fvisc;
-
+	  f[j][0] -= (isnan(delx*fpair + velx*fvisc) || (abs(delx*fpair + velx*fvisc) < DBL_EPSILON)) ? 0.0 : delx*fpair + velx*fvisc;
+	  f[j][1] -= (isnan(dely*fpair + vely*fvisc) || (abs(dely*fpair + vely*fvisc) < DBL_EPSILON)) ? 0.0 : dely*fpair + vely*fvisc;
+	  f[j][2] -= (isnan(delz*fpair + velz*fvisc) || (abs(delz*fpair + velz*fvisc) < DBL_EPSILON)) ? 0.0 : delz*fpair + velz*fvisc;
         }
 
         if (evflag)
