@@ -11,10 +11,10 @@
  See the README file in the top-level LAMMPS directory.
  ------------------------------------------------------------------------- */
 
-#include <cstdio>
-#include <cstring>
-#include <cmath>
-#include <cstdlib>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
 #include "fix_meso.h"
 #include "atom.h"
 #include "comm.h"
