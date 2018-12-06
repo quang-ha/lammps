@@ -12,7 +12,6 @@
  ------------------------------------------------------------------------- */
 
 #include <math.h>
-#include <stdlib.h>
 #include "pair_sph_taitwater_new.h"
 #include "atom.h"
 #include "force.h"
@@ -22,7 +21,7 @@
 #include "error.h"
 #include "domain.h"
 #include "sph_kernel_quintic.h"
-#include <cfloat>
+#include <float.h>
 
 using namespace LAMMPS_NS;
 
@@ -165,14 +164,14 @@ void PairSPHTaitwaterNew::compute(int eflag, int vflag) {
         deltaE = -0.5 *(fpair * delVdotDelR + fvisc * (velx*velx + vely*vely + velz*velz));
 
         // printf("testvar= %f, %f \n", delx, dely);
-        f[i][0] += (isnan(delx*fpair + velx*fvisc) || (abs(delx*fpair + velx*fvisc) < DBL_EPSILON)) ? 0.0 : delx*fpair + velx*fvisc;
-        f[i][1] += (isnan(dely*fpair + vely*fvisc) || (abs(dely*fpair + vely*fvisc) < DBL_EPSILON)) ? 0.0 : dely*fpair + vely*fvisc;
-        f[i][2] += (isnan(delz*fpair + velz*fvisc) || (abs(delz*fpair + velz*fvisc) < DBL_EPSILON)) ? 0.0 : delz*fpair + velz*fvisc;
+        f[i][0] += (isnan(delx*fpair + velx*fvisc) || (std::abs(delx*fpair + velx*fvisc) < DBL_EPSILON)) ? 0.0 : delx*fpair + velx*fvisc;
+        f[i][1] += (isnan(dely*fpair + vely*fvisc) || (std::abs(dely*fpair + vely*fvisc) < DBL_EPSILON)) ? 0.0 : dely*fpair + vely*fvisc;
+        f[i][2] += (isnan(delz*fpair + velz*fvisc) || (std::abs(delz*fpair + velz*fvisc) < DBL_EPSILON)) ? 0.0 : delz*fpair + velz*fvisc;
 
         if (newton_pair || j < nlocal) {
-	  f[j][0] -= (isnan(delx*fpair + velx*fvisc) || (abs(delx*fpair + velx*fvisc) < DBL_EPSILON)) ? 0.0 : delx*fpair + velx*fvisc;
-	  f[j][1] -= (isnan(dely*fpair + vely*fvisc) || (abs(dely*fpair + vely*fvisc) < DBL_EPSILON)) ? 0.0 : dely*fpair + vely*fvisc;
-	  f[j][2] -= (isnan(delz*fpair + velz*fvisc) || (abs(delz*fpair + velz*fvisc) < DBL_EPSILON)) ? 0.0 : delz*fpair + velz*fvisc;
+	  f[j][0] -= (isnan(delx*fpair + velx*fvisc) || (std::abs(delx*fpair + velx*fvisc) < DBL_EPSILON)) ? 0.0 : delx*fpair + velx*fvisc;
+	  f[j][1] -= (isnan(dely*fpair + vely*fvisc) || (std::abs(dely*fpair + vely*fvisc) < DBL_EPSILON)) ? 0.0 : dely*fpair + vely*fvisc;
+	  f[j][2] -= (isnan(delz*fpair + velz*fvisc) || (std::abs(delz*fpair + velz*fvisc) < DBL_EPSILON)) ? 0.0 : delz*fpair + velz*fvisc;
         }
 
         if (evflag)
