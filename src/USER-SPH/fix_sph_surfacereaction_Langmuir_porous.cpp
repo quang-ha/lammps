@@ -121,8 +121,8 @@ FixSPHSurfaceReactionLangmuirPorous::FixSPHSurfaceReactionLangmuirPorous(LAMMPS 
 
 int FixSPHSurfaceReactionLangmuirPorous::setmask() {
   int mask = 0;
+  mask |= INITIAL_INTEGRATE;
   mask |= FINAL_INTEGRATE;
-  mask |= END_OF_STEP;
   return mask;
 }
 
@@ -189,9 +189,8 @@ void FixSPHSurfaceReactionLangmuirPorous::initial_integrate()
       ztmp = x[i][2];
 
       // Check neighbouring atoms
-      int** firstneigh = list->firstneigh;
-      int jnum = numneigh[i];
-      int* jlist = firstneigh[i];
+      jnum = numneigh[i];
+      jlist = firstneigh[i];
 
       // Init value of yAmax to 0
       yAmax = 0.0;
