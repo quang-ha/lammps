@@ -126,7 +126,7 @@ void FixSPHSurfaceReactionLangmuirInletConstant::init() {
 
 void FixSPHSurfaceReactionLangmuirInletConstant::pre_exchange() {
   double **x = atom->x;
-
+  int *type = atom->type;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   int i;
@@ -138,7 +138,8 @@ void FixSPHSurfaceReactionLangmuirInletConstant::pre_exchange() {
     if (mask[i] & groupbit) {
       if ((x[i][0] >= xlo) && (x[i][0] <= xhi) &&
 	  (x[i][1] >= ylo) && (x[i][1] <= yhi) &&
-	  (x[i][2] >= zlo) && (x[i][2] <= zhi)) {
+	  (x[i][2] >= zlo) && (x[i][2] <= zhi) &&
+          (type[i] == 1)) {
 	xA[i] = xAin;
       }
     }
