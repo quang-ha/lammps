@@ -212,7 +212,7 @@ void PairSPHSurfaceReactionLangmuir::compute(int eflag, int vflag) {
 	    else if ((itype==1) && (jtype==2)) { // fluid-solid interaction
 	      jmass = rmass[j];
 	      // Calculate the normal vector
-	      xNij = nx[i] + ny[j];
+	      xNij = nx[i] + nx[j];
 	      yNij = ny[i] + ny[j];
 	      zNij = nz[i] + nz[j];
               // Dot product with position vector
@@ -227,7 +227,7 @@ void PairSPHSurfaceReactionLangmuir::compute(int eflag, int vflag) {
 	    else if ((itype==2) && (jtype==1)) {
 	      jmass = rmass[j];
 	      // Calculate the normal vector
-	      xNij = nx[i] + ny[j];
+	      xNij = nx[i] + nx[j];
 	      yNij = ny[i] + ny[j];
 	      zNij = nz[i] + nz[j];
               // Dot product with position vector

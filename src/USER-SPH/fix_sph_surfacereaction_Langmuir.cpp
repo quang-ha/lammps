@@ -226,7 +226,7 @@ void FixSPHSurfaceReactionLangmuir::initial_integrate()
           if (jtype == 1) { // only for fluid particles
             jmass = rmass[j];
             // Calculate the normal vector
-            xNij = nx[i] + ny[j];
+            xNij = nx[i] + nx[j];
             yNij = ny[i] + ny[j];
             zNij = nz[i] + nz[j];
             // Dot product with position vector
