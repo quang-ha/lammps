@@ -37,6 +37,8 @@ namespace LAMMPS_NS {
     double *DA;
     // Adsorption rate coefficient
     double kaA;
+    // Micro pore volume
+    double micro_pore;
     // Number of adsorption sites needed
     int lambda;
     // phase_support is the size of the inter-phase interaction

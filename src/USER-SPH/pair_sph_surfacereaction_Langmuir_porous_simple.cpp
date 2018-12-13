@@ -206,8 +206,8 @@ void PairSPHSurfaceReactionLangmuirPorousSimple::compute(int eflag, int vflag) {
       // Extra reaction term for Darcy's scale model inside porous solid
       if (itype==2) {
         // Add the terms for the Darcy's scale model
-        dxA[i] -= kaA*xA[i]*pow((1-thetaA[i]), lambda);
-        dyA[i] += kaA*xA[i]*pow((1-thetaA[i]), lambda);
+        dxA[i] -= kaA*micro_pore*xA[i]*pow((1-thetaA[i]), lambda);
+        dyA[i] += kaA*micro_pore*xA[i]*pow((1-thetaA[i]), lambda);
       }
     } // check i atom is inside domain
   } // ii loop
@@ -248,7 +248,7 @@ void PairSPHSurfaceReactionLangmuirPorousSimple::settings(int narg, char **arg) 
    ------------------------------------------------------------------------- */
 
 void PairSPHSurfaceReactionLangmuirPorousSimple::coeff(int narg, char **arg) {
-  if (narg != 7)
+  if (narg != 8)
     error->all(FLERR,"Incorrect number of args for pair_style sph/surfacereaction/Langmuir/porous/simple coefficients");
   if (!allocated)
     allocate();
@@ -264,9 +264,10 @@ void PairSPHSurfaceReactionLangmuirPorousSimple::coeff(int narg, char **arg) {
   // Get the parameters for Langmuir adsorption
   kaA = force->numeric(FLERR, arg[4]);
   lambda = force->numeric(FLERR, arg[5]);
+  micro_pore = force->numeric(FLERR, arg[6]);
 
   // Check if periodicity for transport is allowed
-  is_periodic = force->numeric(FLERR, arg[6]);
+  is_periodic = force->numeric(FLERR, arg[7]);
 
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
