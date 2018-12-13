@@ -118,7 +118,7 @@ void FixSPHSurfaceReactionLangmuirPorousSimple::init() {
 
 /* ---------------------------------------------------------------------- */
 
-void FixSPHSurfaceReactionLangmuirPorousSimple::initial_integrate()
+void FixSPHSurfaceReactionLangmuirPorousSimple::initial_integrate(int /*vflag*/)
 {
   int *mask = atom->mask;
   int nlocal = atom->nlocal;

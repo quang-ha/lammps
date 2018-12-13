@@ -29,7 +29,7 @@ namespace LAMMPS_NS {
     FixSPHSurfaceReactionLangmuirInletConstant(class LAMMPS *, int, char **);
     int setmask();
     virtual void init();
-    virtual void initial_integrate();
+    virtual void initial_integrate(int);
 
   private:
     class NeighList *list;

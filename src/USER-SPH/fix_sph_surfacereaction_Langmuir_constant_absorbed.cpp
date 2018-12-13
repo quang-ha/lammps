@@ -124,7 +124,7 @@ void FixSPHSurfaceReactionLangmuirConstantAbsorbed::init_list(int, NeighList *pt
 
 /* ---------------------------------------------------------------------- */
 
-void FixSPHSurfaceReactionLangmuirConstantAbsorbed::initial_integrate()
+void FixSPHSurfaceReactionLangmuirConstantAbsorbed::initial_integrate(int /*vflag*/)
 {
   int i, ii, inum, itype;
   int *ilist, *jlist, *numneigh, **firstneigh;

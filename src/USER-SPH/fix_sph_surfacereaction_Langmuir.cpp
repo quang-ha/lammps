@@ -147,7 +147,7 @@ void FixSPHSurfaceReactionLangmuir::init_list(int, NeighList *ptr) {
 
 /* ---------------------------------------------------------------------- */
 
-void FixSPHSurfaceReactionLangmuir::initial_integrate()
+void FixSPHSurfaceReactionLangmuir::initial_integrate(int /*vflag*/)
 {
   int i, j, ii, jj, inum, jnum, itype, jtype;
   double di, dj;

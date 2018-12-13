@@ -29,7 +29,7 @@ namespace LAMMPS_NS {
     FixSPHSurfaceReactionLangmuirPorousSimple(class LAMMPS *, int, char **);
     int setmask();
     virtual void init();
-    virtual void initial_integrate();
+    virtual void initial_integrate(int);
     virtual void final_integrate();
     void reset_dt();
 

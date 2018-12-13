@@ -124,7 +124,7 @@ void FixSPHSurfaceReactionLangmuirInletConstant::init() {
    allow for both per-type and per-atom mass
 ------------------------------------------------------------------------- */
 
-void FixSPHSurfaceReactionLangmuirInletConstant::initial_integrate() {
+void FixSPHSurfaceReactionLangmuirInletConstant::initial_integrate(int /*vflag*/) {
   double **x = atom->x;
   int *type = atom->type;
   int *mask = atom->mask;
