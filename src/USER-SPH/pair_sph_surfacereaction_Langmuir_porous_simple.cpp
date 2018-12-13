@@ -211,8 +211,8 @@ void PairSPHSurfaceReactionLangmuirPorousSimple::compute(int eflag, int vflag) {
       }
     } // check i atom is inside domain
   } // ii loop
-  // Communicate the ghost dxA and dmA to the locally owned atoms
-  comm->reverse_comm_pair(this);
+  // // Communicate the ghost dxA and dmA to the locally owned atoms
+  // comm->reverse_comm_pair(this);
 }
 
 /* ----------------------------------------------------------------------
