@@ -189,16 +189,16 @@ void PairSPHSurfaceReactionLangmuirPorousSimple::compute(int eflag, int vflag) {
               dxA[i] = dxA[i] + deltaxA;
             }
 	    if ((itype==1) && (jtype==2)) { // fluid-solid interaction
-	      jmass = rmass[j];
               if (r <= phase_support[itype][jtype]) {
-                deltaxA = kaA*xA[j]*pow((1-thetaA[i]), lambda);
+                deltaxA = kaA*xA[i]*pow((1-thetaA[j]), lambda);
                 dxA[i] = dxA[i] - deltaxA;
               }
-	      dxA[i] = dxA[i] - deltaxA;
 	    } // fluid-solid interaction
 	    else if ((itype==2) && (jtype==1)) {
-	      deltaxA = kaA*xA[j]*pow((1-thetaA[i]), lambda);
-	      dyA[i] = dyA[i] + deltaxA;
+	      if (r <= phase_support[itype][jtype]) {
+		deltaxA = kaA*xA[j]*pow((1-thetaA[i]), lambda);
+		dyA[i] = dyA[i] + deltaxA;
+	      }
 	    }
 	  } // check i-j within support kernel
 	} // check if j particle is inside
@@ -301,7 +301,7 @@ double PairSPHSurfaceReactionLangmuirPorousSimple::init_one(int i, int j) {
 /* ---------------------------------------------------------------------- */
 
 double PairSPHSurfaceReactionLangmuirPorousSimple::single(int i, int j, int itype, int jtype,
-                                                    double rsq, double factor_coul, double factor_lj, double &fforce) {
+							  double rsq, double factor_coul, double factor_lj, double &fforce) {
   fforce = 0.0;
 
   return 0.0;
@@ -310,7 +310,7 @@ double PairSPHSurfaceReactionLangmuirPorousSimple::single(int i, int j, int ityp
 /* ---------------------------------------------------------------------- */
 
 int PairSPHSurfaceReactionLangmuirPorousSimple::pack_forward_comm(int n, int *list, double *buf,
-                                                            int pbc_flag, int *pbc)
+								  int pbc_flag, int *pbc)
 {
   int i, j, m;
 

@@ -31,6 +31,7 @@
 #include "error.h"
 #include "pair.h"
 #include "domain.h"
+#include <float.h>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -107,13 +108,6 @@ int FixSPHSurfaceReactionLangmuirPorousSimple::setmask() {
 
 void FixSPHSurfaceReactionLangmuirPorousSimple::init() {
   dtxA = update->dt;
-
-  // need a full neighbor list, built whenever re-neighboring occurs
-  int irequest = neighbor->request((void *) this);
-  neighbor->requests[irequest]->pair = 0;
-  neighbor->requests[irequest]->fix = 1;
-  neighbor->requests[irequest]->half = 0;
-  neighbor->requests[irequest]->full = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -147,9 +141,12 @@ void FixSPHSurfaceReactionLangmuirPorousSimple::final_integrate() {
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
-      xA[i] += dtxA*dxA[i];
-      if (type[i] == 2) // Only update mass fraction for solid particels
-        yA[i] += dtxA*dyA[i];
+      double ddxA = (isnan(dxA[i]) || (std::abs(dxA[i]) < DBL_EPSILON)) ? 0.0 : dxA[i];
+      xA[i] += dtxA*ddxA;
+      if (type[i] == 2) { // Only update mass fraction for solid particels
+	double ddyA = (isnan(dyA[i]) || (std::abs(dyA[i]) < DBL_EPSILON)) ? 0.0 : dyA[i];
+	yA[i] += dtxA*ddyA;
+      }
     }
   }
 }
