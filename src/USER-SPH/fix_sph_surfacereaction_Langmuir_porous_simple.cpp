@@ -141,11 +141,13 @@ void FixSPHSurfaceReactionLangmuirPorousSimple::final_integrate() {
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
-      double ddxA = (isnan(dxA[i]) || (std::abs(dxA[i]) < DBL_EPSILON)) ? 0.0 : dxA[i];
-      xA[i] += dtxA*ddxA;
-      if (type[i] == 2) { // Only update mass fraction for solid particels
-	double ddyA = (isnan(dyA[i]) || (std::abs(dyA[i]) < DBL_EPSILON)) ? 0.0 : dyA[i];
-	yA[i] += dtxA*ddyA;
+      if (type[i] <= 2) {
+        double ddxA = (isnan(dxA[i]) || (std::abs(dxA[i]) < DBL_EPSILON)) ? 0.0 : dxA[i];
+        xA[i] = std::max(0.0, xA[i] + dtxA*ddxA);
+        if (type[i] == 2) { // Only update mass fraction for solid particels
+          double ddyA = (isnan(dyA[i]) || (std::abs(dyA[i]) < DBL_EPSILON)) ? 0.0 : dyA[i];
+          yA[i] += std::max(0.0, yA[i] + dtxA*ddyA);
+        }
       }
     }
   }
