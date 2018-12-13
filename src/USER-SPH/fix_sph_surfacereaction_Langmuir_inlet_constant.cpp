@@ -107,7 +107,7 @@ FixSPHSurfaceReactionLangmuirInletConstant::FixSPHSurfaceReactionLangmuirInletCo
 
 int FixSPHSurfaceReactionLangmuirInletConstant::setmask() {
   int mask = 0;
-  mask |= PRE_EXCHANGE;
+  mask |= INITIAL_INTEGRATE;
   return mask;
 }
 
@@ -124,7 +124,7 @@ void FixSPHSurfaceReactionLangmuirInletConstant::init() {
    allow for both per-type and per-atom mass
 ------------------------------------------------------------------------- */
 
-void FixSPHSurfaceReactionLangmuirInletConstant::pre_exchange() {
+void FixSPHSurfaceReactionLangmuirInletConstant::initial_integrate() {
   double **x = atom->x;
   int *type = atom->type;
   int *mask = atom->mask;
