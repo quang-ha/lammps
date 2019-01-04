@@ -140,13 +140,9 @@ void FixSPHSurfaceReactionLangmuirInletConstant::initial_integrate(int /*vflag*/
       if ((x[i][0] >= xlo) && (x[i][0] <= xhi) &&
 	  (x[i][1] >= ylo) && (x[i][1] <= yhi) &&
 	  (x[i][2] >= zlo) && (x[i][2] <= zhi) &&
-          (type[i] == 1)) {
-        if (v[i][0] >= 0.0)
-          // Only set the inlet concentration to particles moving to the right
-          xA[i] = xAin;
-        else
-          // Otherwise, set it to zero
-          xA[i] = 0.0;
+          (type[i] == 1) && (v[i][0] >= 0.0)) {
+        // Only set the inlet concentration to particles moving to the right
+        xA[i] = xAin;
       }
     }
   }
