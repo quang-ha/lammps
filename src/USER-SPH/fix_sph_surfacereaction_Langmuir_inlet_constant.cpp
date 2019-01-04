@@ -126,6 +126,7 @@ void FixSPHSurfaceReactionLangmuirInletConstant::init() {
 
 void FixSPHSurfaceReactionLangmuirInletConstant::initial_integrate(int /*vflag*/) {
   double **x = atom->x;
+  double **v = atom->v;
   int *type = atom->type;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
@@ -140,7 +141,12 @@ void FixSPHSurfaceReactionLangmuirInletConstant::initial_integrate(int /*vflag*/
 	  (x[i][1] >= ylo) && (x[i][1] <= yhi) &&
 	  (x[i][2] >= zlo) && (x[i][2] <= zhi) &&
           (type[i] == 1)) {
-	xA[i] = xAin;
+        if (v[i][0] >= 0.0)
+          // Only set the inlet concentration to particles moving to the right
+          xA[i] = xAin;
+        else
+          // Otherwise, set it to zero
+          xA[i] = 0.0;
       }
     }
   }
