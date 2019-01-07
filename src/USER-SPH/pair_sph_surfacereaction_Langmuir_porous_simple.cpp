@@ -11,6 +11,7 @@
 #include "neigh_request.h"
 #include "neighbor.h"
 #include "domain.h"
+#include <float.h>
 
 using namespace LAMMPS_NS;
 
@@ -184,8 +185,10 @@ void PairSPHSurfaceReactionLangmuirPorousSimple::compute(int eflag, int vflag) {
               // The constants give better results...
               di = rho[i] / imass;
               dj = rho[j] / jmass;
-              deltaxA = (1.0/(imass*r))*
+              double ddxA = (1.0/(imass*r))*
                 ((DA[i]*di*imass + DA[j]*dj*jmass)/(di*dj))*(xA[i] - xA[j])*wfd;
+	      // Check for NaN
+	      deltaxA = (isnan(ddxA) || (std::abs(ddxA) < DBL_EPSILON)) ? 0.0 : ddxA;
               dxA[i] = dxA[i] + deltaxA;
             }
 	    if ((itype==1) && (jtype==2)) { // fluid-solid interaction
